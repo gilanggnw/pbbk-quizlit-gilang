@@ -1,71 +1,124 @@
-# Backend API - Golang
+# PDF Text Extractor for Quizlit
 
-## Overview
-This is a backend API service built with Go (Golang).
+A Go-based command-line tool to extract text from PDF files. This utility is designed for the Quizlit application where users can upload PDF files as learning resources.
+
+## Features
+
+- ✅ Extract text from PDF files
+- ✅ Display PDF information (file size, page count, etc.)
+- ✅ Comprehensive error handling and validation
+- ✅ Support for large PDF files (up to 100MB)
+- ✅ Command-line interface for easy testing
+- ✅ Cross-platform compatibility
 
 ## Prerequisites
+
 - Go 1.19 or higher
 - Git
 
-## Installation
+## Installation & Setup
 
-1. Clone the repository:
+1. Navigate to the backend directory:
+
 ```bash
-git clone <repository-url>
 cd be
 ```
 
 2. Install dependencies:
+
 ```bash
-go mod download
+go mod tidy
 ```
 
-3. Set up environment variables:
+## Usage
+
+### Basic Text Extraction
+
 ```bash
-cp .env.example .env
+go run *.go -file "path/to/your/document.pdf"
 ```
 
-## Running the Application
+### Show PDF Information Only
 
-### Development
 ```bash
-go run main.go
+go run *.go -file "path/to/your/document.pdf" -info
 ```
 
-### Production
+### Show Help
+
 ```bash
-go build -o app
-./app
+go run *.go -help
 ```
 
-## API Endpoints
+### Build Executable
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET    | `/health` | Health check |
-| GET    | `/api/v1/` | API root |
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | `8080` |
-| `DB_HOST` | Database host | `localhost` |
-| `DB_PORT` | Database port | `5432` |
-
-## Project Structure
+```bash
+go build -o pdf-extractor
+./pdf-extractor -file "document.pdf"
 ```
+
+## Command Line Options
+
+| Option | Description | Required |
+|--------|-------------|----------|
+| `-file` | Path to the PDF file to parse | Yes |
+| `-info` | Show only PDF information without extracting text | No |
+| `-help` | Show help message | No |
+
+## Examples
+
+### Extract text from a PDF
+
+```bash
+go run *.go -file "sample-document.pdf"
+```
+
+### Check PDF information
+
+```bash
+go run *.go -file "large-document.pdf" -info
+```
+
+### Extract from PDF with spaces in filename
+
+```bash
+go run *.go -file "My Document With Spaces.pdf"
+```
+
+## Error Handling
+
+The tool includes comprehensive error handling for:
+
+- ❌ File not found
+- ❌ Invalid file extensions (non-PDF files)
+- ❌ File permission issues
+- ❌ Corrupted PDF files
+- ❌ Empty files
+- ❌ Files exceeding size limits (100MB)
+- ❌ PDFs with no extractable text
+
+Each error includes helpful suggestions for resolution.
+
+## File Structure
+
+```text
 be/
-├── cmd/
-├── internal/
-├── pkg/
-├── main.go
-└── go.mod
+├── main.go          # Command-line interface and main logic
+├── pdf_parser.go    # PDF parsing functionality
+├── utils.go         # File validation and error handling
+├── go.mod           # Go module file
+├── go.sum           # Dependency checksums
+└── README.md        # This file
 ```
+
+## Integration with Quizlit
+
+This PDF parser can be integrated into your Quizlit web application as an HTTP API endpoint or background job processor.
 
 ## Contributing
+
 1. Fork the repository
 2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
