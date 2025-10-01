@@ -60,64 +60,113 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Features Section */}
-        <div className="mt-20">
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="pt-6">
-              <div className="flow-root bg-white dark:bg-gray-800 rounded-lg px-6 pb-8">
-                <div className="-mt-6">
-                  <div>
-                    <span className="inline-flex items-center justify-center p-3 bg-indigo-500 rounded-md shadow-lg">
-                      <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                    </span>
-                  </div>
-                  <h3 className="mt-8 text-lg font-medium text-gray-900 dark:text-white tracking-tight">Quick Generation</h3>
-                  <p className="mt-5 text-base text-gray-500 dark:text-gray-300">
-                    Create quizzes in minutes with our intuitive interface and smart question generation.
-                  </p>
+        {/* Everything You Need Section */}
+        <div className="mt-32">
+          <div className="text-center">
+            <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white sm:text-4xl">
+              Everything you need to create{" "}
+              <span className="text-indigo-600">amazing quizzes</span>
+            </h2>
+            <p className="mt-4 max-w-3xl mx-auto text-lg text-gray-500 dark:text-gray-300">
+              From document upload to detailed analytics, we've got every step
+              of your quiz creation journey covered.
+            </p>
+          </div>
+
+          <div className="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Quick Generation */}
+            <div className="relative bg-gray-800 rounded-xl p-8 border border-gray-700">
+              <div className="flex items-center mb-4">
+                <div className="flex-shrink-0">
+                  <svg className="h-8 w-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
                 </div>
               </div>
+              <h3 className="text-xl font-semibold text-white mb-3">Quick Generation</h3>
+              <p className="text-gray-300 leading-relaxed">
+                Create quizzes in minutes with our intuitive interface and smart question generation.
+              </p>
             </div>
 
-            <div className="pt-6">
-              <div className="flow-root bg-white dark:bg-gray-800 rounded-lg px-6 pb-8">
-                <div className="-mt-6">
-                  <div>
-                    <span className="inline-flex items-center justify-center p-3 bg-indigo-500 rounded-md shadow-lg">
-                      <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </span>
-                  </div>
-                  <h3 className="mt-8 text-lg font-medium text-gray-900 dark:text-white tracking-tight">Easy to Use</h3>
-                  <p className="mt-5 text-base text-gray-500 dark:text-gray-300">
-                    User-friendly interface designed for both beginners and experienced quiz creators.
-                  </p>
+            {/* Easy to Use */}
+            <div className="relative bg-gray-800 rounded-xl p-8 border border-gray-700">
+              <div className="flex items-center mb-4">
+                <div className="flex-shrink-0">
+                  <svg className="h-8 w-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                 </div>
               </div>
+              <h3 className="text-xl font-semibold text-white mb-3">Easy to Use</h3>
+              <p className="text-gray-300 leading-relaxed">
+                Create quizzes in minutes with our intuitive interface and smart question generation.
+              </p>
             </div>
 
-            <div className="pt-6">
-              <div className="flow-root bg-white dark:bg-gray-800 rounded-lg px-6 pb-8">
-                <div className="-mt-6">
-                  <div>
-                    <span className="inline-flex items-center justify-center p-3 bg-indigo-500 rounded-md shadow-lg">
-                      <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
-                      </svg>
-                    </span>
-                  </div>
-                  <h3 className="mt-8 text-lg font-medium text-gray-900 dark:text-white tracking-tight">Customizable</h3>
-                  <p className="mt-5 text-base text-gray-500 dark:text-gray-300">
-                    Customize your quizzes with different question types, and difficulty levels.
-                  </p>
+            {/* Customizable */}
+            <div className="relative bg-gray-800 rounded-xl p-8 border border-gray-700">
+              <div className="flex items-center mb-4">
+                <div className="flex-shrink-0">
+                  <svg className="h-8 w-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                  </svg>
                 </div>
               </div>
+              <h3 className="text-xl font-semibold text-white mb-3">Customizable</h3>
+              <p className="text-gray-300 leading-relaxed">
+                Customize your quizzes with different question types and difficulty levels.
+              </p>
+            </div>
+
+            {/* Quick Generation (Second Row) */}
+            <div className="relative bg-gray-800 rounded-xl p-8 border border-gray-700">
+              <div className="flex items-center mb-4">
+                <div className="flex-shrink-0">
+                  <svg className="h-8 w-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-3">Quick Generation</h3>
+              <p className="text-gray-300 leading-relaxed">
+                Create quizzes in minutes with our intuitive interface and smart question generation.
+              </p>
+            </div>
+
+            {/* Easy to Use (Second Row) */}
+            <div className="relative bg-gray-800 rounded-xl p-8 border border-gray-700">
+              <div className="flex items-center mb-4">
+                <div className="flex-shrink-0">
+                  <svg className="h-8 w-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-3">Easy to Use</h3>
+              <p className="text-gray-300 leading-relaxed">
+                Create quizzes in minutes with our intuitive interface and smart question generation.
+              </p>
+            </div>
+
+            {/* Easy to Use (Third in Second Row) */}
+            <div className="relative bg-gray-800 rounded-xl p-8 border border-gray-700">
+              <div className="flex items-center mb-4">
+                <div className="flex-shrink-0">
+                  <svg className="h-8 w-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-3">Easy to Use</h3>
+              <p className="text-gray-300 leading-relaxed">
+                Create quizzes in minutes with our intuitive interface and smart question generation.
+              </p>
             </div>
           </div>
         </div>
+
+
       </main>
     </div>
   );
