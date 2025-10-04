@@ -3,16 +3,20 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 )
 
 func main() {
-	// Define command line flags
+	// Check if running as server or CLI
 	var (
-		filePath = flag.String("file", "", "Path to the PDF file to parse (required)")
-		infoOnly = flag.Bool("info", false, "Show only PDF information without extracting text")
-		help     = flag.Bool("help", false, "Show help message")
+		serverMode = flag.Bool("server", false, "Run as HTTP server")
+		port       = flag.String("port", "8080", "Server port (only for server mode)")
+		uploadDir  = flag.String("upload-dir", "./uploads", "Upload directory for server mode")
+		filePath   = flag.String("file", "", "Path to the PDF file to parse (CLI mode)")
+		infoOnly   = flag.Bool("info", false, "Show only PDF information without extracting text (CLI mode)")
+		help       = flag.Bool("help", false, "Show help message")
 	)
 	flag.Parse()
 
@@ -22,9 +26,28 @@ func main() {
 		return
 	}
 
+	// Server mode
+	if *serverMode {
+		runServer(*port, *uploadDir)
+		return
+	}
+
+	// CLI mode
+	runCLI(*filePath, *infoOnly)
+}
+
+func runServer(port, uploadDir string) {
+	log.Println("Starting PDF Parser API Server...")
+	server := NewAPIServer(uploadDir)
+	if err := server.Start(port); err != nil {
+		log.Fatalf("Server failed: %v", err)
+	}
+}
+
+func runCLI(filePath string, infoOnly bool) {
 	// Validate required arguments
-	if *filePath == "" {
-		fmt.Println("Error: PDF file path is required")
+	if filePath == "" {
+		fmt.Println("Error: PDF file path is required in CLI mode")
 		fmt.Println("Use -help for usage information")
 		os.Exit(1)
 	}
@@ -33,8 +56,8 @@ func main() {
 	parser := NewPDFParser()
 
 	// Show PDF info if requested
-	if *infoOnly {
-		err := showPDFInfo(parser, *filePath)
+	if infoOnly {
+		err := showPDFInfo(parser, filePath)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -43,7 +66,7 @@ func main() {
 	}
 
 	// Extract and display text
-	err := extractAndDisplayText(parser, *filePath)
+	err := extractAndDisplayText(parser, filePath)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
@@ -51,23 +74,39 @@ func main() {
 }
 
 func showHelp() {
-	fmt.Println("PDF Text Extractor")
-	fmt.Println("==================")
+	fmt.Println("PDF Text Extractor & API Server")
+	fmt.Println("================================")
 	fmt.Println()
-	fmt.Println("A command-line tool to extract text from PDF files for the Quizlit application.")
+	fmt.Println("A tool to extract text from PDF files via CLI or REST API.")
 	fmt.Println()
-	fmt.Println("Usage:")
+	fmt.Println("Server Mode:")
+	fmt.Println("  go run *.go -server")
+	fmt.Println("  go run *.go -server -port 8080 -upload-dir ./uploads")
+	fmt.Println()
+	fmt.Println("CLI Mode:")
 	fmt.Println("  go run *.go -file <path_to_pdf>")
+	fmt.Println("  go run *.go -file <path_to_pdf> -info")
 	fmt.Println()
 	fmt.Println("Options:")
-	fmt.Println("  -file string    Path to the PDF file to parse (required)")
-	fmt.Println("  -info          Show only PDF information without extracting text")
-	fmt.Println("  -help          Show this help message")
+	fmt.Println("  -server           Run as HTTP server")
+	fmt.Println("  -port string      Server port (default: 8080)")
+	fmt.Println("  -upload-dir       Upload directory for server mode (default: ./uploads)")
+	fmt.Println("  -file string      Path to the PDF file to parse (CLI mode)")
+	fmt.Println("  -info             Show only PDF information without extracting text (CLI mode)")
+	fmt.Println("  -help             Show this help message")
+	fmt.Println()
+	fmt.Println("API Endpoints (Server Mode):")
+	fmt.Println("  GET  /api/health        - Health check")
+	fmt.Println("  POST /api/pdf/upload    - Upload and extract text from PDF")
+	fmt.Println("  POST /api/pdf/info      - Get PDF information only")
 	fmt.Println()
 	fmt.Println("Examples:")
+	fmt.Println("  # Start server")
+	fmt.Println("  go run *.go -server")
+	fmt.Println()
+	fmt.Println("  # CLI mode")
 	fmt.Println("  go run *.go -file document.pdf")
-	fmt.Println("  go run *.go -file document.pdf -info")
-	fmt.Println("  go run *.go -file \"C:\\path\\to\\document.pdf\"")
+	fmt.Println("  go run *.go -file \"C:\\path\\to\\document.pdf\" -info")
 }
 
 func showPDFInfo(parser *PDFParser, filePath string) error {

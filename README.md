@@ -1,13 +1,15 @@
-# Quiz Generator
+# Quizlit - Quiz Generator
 
 A modern quiz application built with Next.js frontend and Go backend.
 
 ## Features
 
 - Interactive quiz generation and management
+- **PDF Upload & Text Extraction** - Upload PDF files and extract text for quiz generation
 - Real-time quiz taking experience
 - User authentication and progress tracking
 - Responsive design for all devices
+- REST API for PDF processing
 
 ## Tech Stack
 
@@ -51,6 +53,33 @@ cd frontend
 npm install
 npm run dev
 ```
+
+## PDF Upload & Text Extraction
+
+The backend includes a REST API for uploading PDF files and extracting text content.
+
+### Quick Start
+
+**Backend:**
+```bash
+cd be
+go run *.go -server
+```
+
+**Frontend:**
+```bash
+cd fe
+npm run dev
+```
+
+**Test Page:** `http://localhost:3000/pdf-test`
+
+**API Endpoints:**
+- `GET /api/health` - Health check
+- `POST /api/pdf/upload` - Upload PDF and extract text
+- `POST /api/pdf/info` - Get PDF metadata
+
+📚 **[Full Integration Guide](./INTEGRATION_GUIDE.md)** | **[API Documentation](./be/API_DOCUMENTATION.md)**
 
 ## API Endpoints
 
