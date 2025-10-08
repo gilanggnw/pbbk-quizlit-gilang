@@ -11,9 +11,10 @@ import (
 func main() {
 	// Check if running as server or CLI
 	var (
-		serverMode = flag.Bool("server", false, "Run as HTTP server")
+		serverMode = flag.Bool("server", false, "Run as PDF parser HTTP server")
+		authMode   = flag.Bool("auth", false, "Run as authentication HTTP server")
 		port       = flag.String("port", "8080", "Server port (only for server mode)")
-		uploadDir  = flag.String("upload-dir", "./uploads", "Upload directory for server mode")
+		uploadDir  = flag.String("upload-dir", "./uploads", "Upload directory for PDF server mode")
 		filePath   = flag.String("file", "", "Path to the PDF file to parse (CLI mode)")
 		infoOnly   = flag.Bool("info", false, "Show only PDF information without extracting text (CLI mode)")
 		help       = flag.Bool("help", false, "Show help message")
@@ -26,7 +27,13 @@ func main() {
 		return
 	}
 
-	// Server mode
+	// Authentication server mode
+	if *authMode {
+		runAuthServer(*port)
+		return
+	}
+
+	// PDF server mode
 	if *serverMode {
 		runServer(*port, *uploadDir)
 		return
@@ -34,6 +41,28 @@ func main() {
 
 	// CLI mode
 	runCLI(*filePath, *infoOnly)
+}
+
+func runAuthServer(port string) {
+	log.Println("Starting Authentication API Server with Supabase Auth...")
+
+	// Load configuration
+	config, err := LoadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+
+	// Set Supabase JWT secret for token validation
+	SupabaseJWTSecret = config.SupabaseJWTSecret
+
+	log.Printf("✅ Supabase configuration loaded")
+	log.Printf("   URL: %s", config.SupabaseURL)
+
+	// Start auth server
+	server := NewAuthServer()
+	if err := server.StartAuthServer(config.ServerPort); err != nil {
+		log.Fatalf("Auth server failed: %v", err)
+	}
 }
 
 func runServer(port, uploadDir string) {
@@ -74,12 +103,16 @@ func runCLI(filePath string, infoOnly bool) {
 }
 
 func showHelp() {
-	fmt.Println("PDF Text Extractor & API Server")
-	fmt.Println("================================")
+	fmt.Println("Quizlit Backend API")
+	fmt.Println("===================")
 	fmt.Println()
-	fmt.Println("A tool to extract text from PDF files via CLI or REST API.")
+	fmt.Println("A multi-purpose backend server for PDF parsing and user authentication.")
 	fmt.Println()
-	fmt.Println("Server Mode:")
+	fmt.Println("Authentication Server Mode:")
+	fmt.Println("  go run *.go -auth")
+	fmt.Println("  go run *.go -auth -port 8080")
+	fmt.Println()
+	fmt.Println("PDF Server Mode:")
 	fmt.Println("  go run *.go -server")
 	fmt.Println("  go run *.go -server -port 8080 -upload-dir ./uploads")
 	fmt.Println()
@@ -88,25 +121,34 @@ func showHelp() {
 	fmt.Println("  go run *.go -file <path_to_pdf> -info")
 	fmt.Println()
 	fmt.Println("Options:")
-	fmt.Println("  -server           Run as HTTP server")
+	fmt.Println("  -auth             Run as authentication HTTP server")
+	fmt.Println("  -server           Run as PDF parser HTTP server")
 	fmt.Println("  -port string      Server port (default: 8080)")
-	fmt.Println("  -upload-dir       Upload directory for server mode (default: ./uploads)")
+	fmt.Println("  -upload-dir       Upload directory for PDF server mode (default: ./uploads)")
 	fmt.Println("  -file string      Path to the PDF file to parse (CLI mode)")
 	fmt.Println("  -info             Show only PDF information without extracting text (CLI mode)")
 	fmt.Println("  -help             Show this help message")
 	fmt.Println()
-	fmt.Println("API Endpoints (Server Mode):")
-	fmt.Println("  GET  /api/health        - Health check")
-	fmt.Println("  POST /api/pdf/upload    - Upload and extract text from PDF")
-	fmt.Println("  POST /api/pdf/info      - Get PDF information only")
+	fmt.Println("Auth API Endpoints:")
+	fmt.Println("  POST /api/auth/register  - Register new user")
+	fmt.Println("  POST /api/auth/login     - Login user")
+	fmt.Println("  GET  /api/auth/profile   - Get user profile (protected)")
+	fmt.Println("  GET  /api/auth/health    - Health check")
+	fmt.Println()
+	fmt.Println("PDF API Endpoints:")
+	fmt.Println("  GET  /api/health         - Health check")
+	fmt.Println("  POST /api/pdf/upload     - Upload and extract text from PDF")
+	fmt.Println("  POST /api/pdf/info       - Get PDF information only")
 	fmt.Println()
 	fmt.Println("Examples:")
-	fmt.Println("  # Start server")
+	fmt.Println("  # Start auth server")
+	fmt.Println("  go run *.go -auth")
+	fmt.Println()
+	fmt.Println("  # Start PDF server")
 	fmt.Println("  go run *.go -server")
 	fmt.Println()
 	fmt.Println("  # CLI mode")
 	fmt.Println("  go run *.go -file document.pdf")
-	fmt.Println("  go run *.go -file \"C:\\path\\to\\document.pdf\" -info")
 }
 
 func showPDFInfo(parser *PDFParser, filePath string) error {

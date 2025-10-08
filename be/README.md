@@ -1,124 +1,202 @@
-# PDF Text Extractor for Quizlit
+# Quizlit Backend API
 
-A Go-based command-line tool to extract text from PDF files. This utility is designed for the Quizlit application where users can upload PDF files as learning resources.
+A Go-based backend server for the Quizlit application with PDF text extraction and user authentication capabilities.
 
-## Features
+## 🚀 Features
 
-- ✅ Extract text from PDF files
-- ✅ Display PDF information (file size, page count, etc.)
-- ✅ Comprehensive error handling and validation
-- ✅ Support for large PDF files (up to 100MB)
-- ✅ Command-line interface for easy testing
+### PDF Processing
+- ✅ Extract text from PDF files via REST API
+- ✅ Get PDF metadata (file size, page count, etc.)
+- ✅ File upload with validation (up to 100MB)
+- ✅ Automatic cleanup after processing
+
+### User Authentication
+- ✅ User registration with secure password hashing (bcrypt)
+- ✅ JWT-based authentication
+- ✅ Protected API endpoints
+- ✅ Supabase PostgreSQL integration
+
+### CLI Tools
+- ✅ Command-line PDF text extraction
+- ✅ Multiple server modes
 - ✅ Cross-platform compatibility
 
-## Prerequisites
+## 📋 Prerequisites
 
 - Go 1.19 or higher
+- PostgreSQL database (Supabase recommended)
 - Git
 
-## Installation & Setup
+## 🔧 Installation & Setup
 
 1. Navigate to the backend directory:
 
-```bash
-cd be
-```
+   ```bash
+   cd be
+   ```
 
 2. Install dependencies:
 
+   ```bash
+   go mod tidy
+   ```
+
+3. Configure environment variables:
+
+   ```bash
+   cp .env.example .env
+   # Edit .env with your Supabase credentials
+   ```
+
+## 🎯 Server Modes
+
+This application can run in three different modes:
+
+### 1. Authentication Server
+
+Start the authentication API server:
+
 ```bash
-go mod tidy
+go run *.go -auth
 ```
 
-## Usage
+Endpoints available at `http://localhost:8080`:
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Login user
+- `GET /api/auth/profile` - Get user profile (protected)
+- `GET /api/auth/health` - Health check
 
-### Basic Text Extraction
+📚 **Full documentation:** [docs/AUTH_SETUP.md](docs/AUTH_SETUP.md)
+
+### 2. PDF Server
+
+Start the PDF processing API server:
 
 ```bash
-go run *.go -file "path/to/your/document.pdf"
+go run *.go -server
 ```
 
-### Show PDF Information Only
+Endpoints available at `http://localhost:8080`:
+- `POST /api/pdf/upload` - Upload and extract text from PDF
+- `POST /api/pdf/info` - Get PDF metadata
+- `GET /health` - Health check
+
+### 3. CLI Mode (PDF Extraction)
+
+Extract text from PDF files directly:
 
 ```bash
-go run *.go -file "path/to/your/document.pdf" -info
-```
+# Extract text
+go run *.go -file "path/to/document.pdf"
 
-### Show Help
+# Show PDF info only
+go run *.go -file "path/to/document.pdf" -info
 
-```bash
+# Show help
 go run *.go -help
 ```
 
-### Build Executable
+## 📝 Command Line Options
 
-```bash
-go build -o pdf-extractor
-./pdf-extractor -file "document.pdf"
-```
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-auth` | Run as authentication server | - |
+| `-server` | Run as PDF processing server | - |
+| `-port` | Server port | `8080` |
+| `-file` | Path to PDF file (CLI mode) | - |
+| `-info` | Show PDF info only (CLI mode) | `false` |
+| `-upload-dir` | Upload directory for PDF server | `./uploads` |
+| `-help` | Show help message | - |
 
-## Command Line Options
-
-| Option | Description | Required |
-|--------|-------------|----------|
-| `-file` | Path to the PDF file to parse | Yes |
-| `-info` | Show only PDF information without extracting text | No |
-| `-help` | Show help message | No |
-
-## Examples
-
-### Extract text from a PDF
-
-```bash
-go run *.go -file "sample-document.pdf"
-```
-
-### Check PDF information
-
-```bash
-go run *.go -file "large-document.pdf" -info
-```
-
-### Extract from PDF with spaces in filename
-
-```bash
-go run *.go -file "My Document With Spaces.pdf"
-```
-
-## Error Handling
-
-The tool includes comprehensive error handling for:
-
-- ❌ File not found
-- ❌ Invalid file extensions (non-PDF files)
-- ❌ File permission issues
-- ❌ Corrupted PDF files
-- ❌ Empty files
-- ❌ Files exceeding size limits (100MB)
-- ❌ PDFs with no extractable text
-
-Each error includes helpful suggestions for resolution.
-
-## File Structure
+## 🏗️ Project Structure
 
 ```text
 be/
-├── main.go          # Command-line interface and main logic
-├── pdf_parser.go    # PDF parsing functionality
-├── utils.go         # File validation and error handling
-├── go.mod           # Go module file
-├── go.sum           # Dependency checksums
-└── README.md        # This file
+├── main.go                   # Application entry point
+├── config.go                 # Configuration and database
+├── models.go                 # Data models
+├── errors.go                 # Error definitions
+│
+├── auth.go                   # JWT authentication & middleware
+├── auth_server.go            # Auth HTTP server
+├── auth_handlers.go          # Auth endpoint handlers
+│
+├── pdf_parser.go             # PDF text extraction
+├── api_server.go             # PDF API server
+├── utils.go                  # File validation utilities
+│
+├── docs/                     # Documentation
+│   ├── API_DOCUMENTATION.md
+│   ├── AUTH_API_DOCUMENTATION.md
+│   └── AUTH_SETUP.md
+│
+├── .env.example              # Environment template
+├── .gitignore                # Git ignore rules
+├── go.mod                    # Go module file
+└── README.md                 # This file
 ```
 
-## Integration with Quizlit
+## 📚 Documentation
 
-This PDF parser can be integrated into your Quizlit web application as an HTTP API endpoint or background job processor.
+- **[Authentication Setup Guide](docs/AUTH_SETUP.md)** - Complete auth setup with Supabase
+- **[Auth API Documentation](docs/AUTH_API_DOCUMENTATION.md)** - Authentication endpoints reference
+- **[PDF API Documentation](docs/API_DOCUMENTATION.md)** - PDF processing endpoints reference
 
-## Contributing
+## 🔒 Security
+
+- Passwords hashed with bcrypt (cost factor 10)
+- JWT tokens with 24-hour expiry
+- CORS enabled for frontend integration
+- Environment-based configuration
+- SQL injection protection via prepared statements
+
+## 🚀 Production Deployment
+
+1. Build the binary:
+
+   ```bash
+   go build -o quizlit-backend
+   ```
+
+2. Run in production:
+
+   ```bash
+   # Authentication server
+   ./quizlit-backend -auth -port 8080
+
+   # PDF server
+   ./quizlit-backend -server -port 8081
+   ```
+
+3. Use a process manager (systemd, PM2, etc.)
+4. Set up reverse proxy (nginx, Caddy) with HTTPS
+5. Configure proper CORS for your domain
+
+## 🧪 Testing
+
+```bash
+# Test auth server
+go run *.go -auth
+
+# Test PDF server
+go run *.go -server
+
+# Test CLI
+go run *.go -file "test.pdf"
+```
+
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is part of the Quizlit application.
+
+## 🆘 Support
+
+For setup help and troubleshooting, see the documentation in the `docs/` folder.

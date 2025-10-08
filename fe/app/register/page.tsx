@@ -2,25 +2,45 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { signUp } from "../lib/auth";
 
 export default function Register() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
   });
+  const [error, setError] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement registration logic
+    setError("");
+    setLoading(true);
+
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords don't match!");
+      setError("Passwords don't match!");
+      setLoading(false);
       return;
     }
-    console.log("Registration attempt:", formData);
-    // For now, redirect to dashboard
-    window.location.href = "/dashboard";
+
+    try {
+      await signUp({
+        email: formData.email,
+        password: formData.password,
+      });
+      setSuccess(true);
+      // Note: Supabase requires email confirmation by default
+      // User will receive a confirmation email
+    } catch (err: any) {
+      setError(err.message || "Failed to sign up");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,6 +76,23 @@ export default function Register() {
       {/* Form */}
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+          
+          {success && (
+            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-sm text-green-600">
+                Registration successful! Please check your email to confirm your account.
+              </p>
+              <Link href="/login" className="text-sm text-green-700 underline mt-2 block">
+                Go to login
+              </Link>
+            </div>
+          )}
+          
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label
@@ -177,9 +214,10 @@ export default function Register() {
             <div>
               <button
                 type="submit"
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                disabled={loading || success}
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Create account
+                {loading ? "Creating account..." : "Create account"}
               </button>
             </div>
           </form>
