@@ -13,6 +13,7 @@ func main() {
 	var (
 		serverMode = flag.Bool("server", false, "Run as PDF parser HTTP server")
 		authMode   = flag.Bool("auth", false, "Run as authentication HTTP server")
+		quizMode   = flag.Bool("quiz", false, "Run as quiz HTTP server")
 		port       = flag.String("port", "8080", "Server port (only for server mode)")
 		uploadDir  = flag.String("upload-dir", "./uploads", "Upload directory for PDF server mode")
 		filePath   = flag.String("file", "", "Path to the PDF file to parse (CLI mode)")
@@ -30,6 +31,12 @@ func main() {
 	// Authentication server mode
 	if *authMode {
 		runAuthServer(*port)
+		return
+	}
+
+	// Quiz server mode
+	if *quizMode {
+		runQuizServer(*port)
 		return
 	}
 

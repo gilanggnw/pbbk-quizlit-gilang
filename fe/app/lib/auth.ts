@@ -3,11 +3,22 @@ import { supabase } from './supabaseClient'
 export interface User {
   id: string
   email?: string
+  user_metadata?: {
+    display_name?: string
+    phone?: string
+  }
+  app_metadata?: {
+    provider?: string
+    providers?: string[]
+  }
+  created_at?: string
+  last_sign_in_at?: string
 }
 
 export interface SignUpCredentials {
   email: string
   password: string
+  displayName?: string
 }
 
 export interface SignInCredentials {
@@ -18,10 +29,15 @@ export interface SignInCredentials {
 /**
  * Sign up a new user with email and password
  */
-export async function signUp({ email, password }: SignUpCredentials) {
+export async function signUp({ email, password, displayName }: SignUpCredentials) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      data: {
+        display_name: displayName || email.split('@')[0],
+      }
+    }
   })
 
   if (error) {
@@ -89,4 +105,25 @@ export function onAuthStateChange(callback: (user: User | null) => void) {
   return supabase.auth.onAuthStateChange((event, session) => {
     callback(session?.user || null)
   })
+}
+
+/**
+ * Get user display name or fallback to email
+ */
+export function getUserDisplayName(user: User | null): string {
+  if (!user) return 'Guest';
+  return user.user_metadata?.display_name || user.email?.split('@')[0] || 'User';
+}
+
+/**
+ * Get user initials for avatar
+ */
+export function getUserInitials(user: User | null): string {
+  if (!user) return 'G';
+  const displayName = getUserDisplayName(user);
+  const parts = displayName.split(' ');
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return displayName.slice(0, 2).toUpperCase();
 }

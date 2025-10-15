@@ -1,6 +1,6 @@
 // API client for PDF Parser backend
 // Base URL - update this based on your environment
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const API_BASE_URL = process.env.NEXT_PUBLIC_PDF_API_URL || 'http://localhost:8081';
 
 export interface PDFUploadResponse {
   success: boolean;
