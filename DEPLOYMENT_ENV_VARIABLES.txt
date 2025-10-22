@@ -1,0 +1,242 @@
+===============================================================================
+DEPLOYMENT ENVIRONMENT VARIABLES GUIDE
+===============================================================================
+
+This file contains all environment variables needed for deploying:
+- Frontend (fe) on Vercel
+- Backend (be) on Render
+
+===============================================================================
+BACKEND (Render) - Environment Variables
+===============================================================================
+
+Set these environment variables in your Render dashboard:
+
+1. PORT
+   Value: 8080
+   Note: Render may provide this automatically, but set it if needed
+
+2. OPENAI_API_KEY
+   Value: <your-openai-api-key>
+   Note: Get this from https://platform.openai.com/api-keys
+
+3. CORS_ORIGIN
+   Value: https://your-vercel-app.vercel.app
+   Note: Replace with your actual Vercel frontend URL
+   Important: Update this AFTER deploying frontend to Vercel
+   Example: https://quizlit-app.vercel.app
+
+4. DATABASE_URL
+   Value: <your-database-connection-string>
+   Note: If using Render PostgreSQL, this will be auto-generated
+
+5. SUPABASE_URL
+   Value: <your-supabase-project-url>
+   Note: Get from Supabase dashboard > Settings > API
+   Format: https://xxxxxxxxxxxxx.supabase.co
+
+6. SUPABASE_ANON_KEY
+   Value: <your-supabase-anon-public-key>
+   Note: Get from Supabase dashboard > Settings > API
+   This is the "anon" public key
+
+7. SUPABASE_JWT_SECRET
+   Value: <your-supabase-jwt-secret>
+   Note: Get from Supabase dashboard > Settings > API
+   This is the JWT Secret (keep this secure!)
+
+===============================================================================
+FRONTEND (Vercel) - Environment Variables
+===============================================================================
+
+Set these environment variables in your Vercel project settings:
+
+1. NEXT_PUBLIC_API_URL
+   Value: https://your-render-app.onrender.com/api/v1
+   Note: Replace with your actual Render backend URL
+   Important: Update this AFTER deploying backend to Render
+   Example: https://quizlit-backend.onrender.com/api/v1
+
+2. NEXT_PUBLIC_PDF_API_URL
+   Value: https://your-render-app.onrender.com
+   Note: Same as backend URL but without /api/v1
+   Example: https://quizlit-backend.onrender.com
+
+3. NEXT_PUBLIC_SUPABASE_URL
+   Value: <your-supabase-project-url>
+   Note: Same as backend SUPABASE_URL
+   Format: https://xxxxxxxxxxxxx.supabase.co
+
+4. NEXT_PUBLIC_SUPABASE_ANON_KEY
+   Value: <your-supabase-anon-public-key>
+   Note: Same as backend SUPABASE_ANON_KEY
+   This is the "anon" public key (safe to expose in frontend)
+
+===============================================================================
+DEPLOYMENT STEPS
+===============================================================================
+
+STEP 1: Deploy Backend to Render
+---------------------------------
+1. Go to https://render.com and sign in
+2. Click "New +" and select "Web Service"
+3. Connect your GitHub repository
+4. Configure:
+   - Name: your-app-backend
+   - Root Directory: be
+   - Environment: Go
+   - Build Command: go build -o app
+   - Start Command: ./app
+5. Add all backend environment variables listed above
+   (Skip CORS_ORIGIN for now, you'll update it after frontend deployment)
+6. Click "Create Web Service"
+7. Wait for deployment to complete
+8. Copy your Render URL (e.g., https://your-app.onrender.com)
+
+STEP 2: Deploy Frontend to Vercel
+----------------------------------
+1. Go to https://vercel.com and sign in
+2. Click "Add New..." and select "Project"
+3. Import your GitHub repository
+4. Configure:
+   - Framework Preset: Next.js
+   - Root Directory: fe
+   - Build Command: (leave default) npm run build
+   - Output Directory: (leave default) .next
+5. Add all frontend environment variables listed above
+   - Use the Render URL from Step 1 for NEXT_PUBLIC_API_URL
+6. Click "Deploy"
+7. Wait for deployment to complete
+8. Copy your Vercel URL (e.g., https://your-app.vercel.app)
+
+STEP 3: Update CORS_ORIGIN on Render
+-------------------------------------
+1. Go back to your Render dashboard
+2. Select your backend service
+3. Go to "Environment" tab
+4. Update CORS_ORIGIN with your Vercel URL from Step 2
+5. Save changes (service will redeploy automatically)
+
+STEP 4: Test Your Application
+------------------------------
+1. Visit your Vercel URL
+2. Try to sign up/login
+3. Test quiz creation and other features
+4. Check browser console for any CORS or API errors
+
+===============================================================================
+LOCAL DEVELOPMENT ENVIRONMENT VARIABLES
+===============================================================================
+
+Backend (.env file in /be directory):
+--------------------------------------
+PORT=8080
+OPENAI_API_KEY=<your-openai-api-key>
+CORS_ORIGIN=http://localhost:3000
+DATABASE_URL=<your-local-or-remote-database-url>
+SUPABASE_URL=<your-supabase-url>
+SUPABASE_ANON_KEY=<your-supabase-anon-key>
+SUPABASE_JWT_SECRET=<your-supabase-jwt-secret>
+
+Frontend (.env.local file in /fe directory):
+---------------------------------------------
+NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
+NEXT_PUBLIC_PDF_API_URL=http://localhost:8081
+NEXT_PUBLIC_SUPABASE_URL=<your-supabase-url>
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-supabase-anon-key>
+
+===============================================================================
+IMPORTANT NOTES
+===============================================================================
+
+1. Never commit .env or .env.local files to Git
+   - They are already in .gitignore
+   - Use .env.example files as templates
+
+2. Frontend variables MUST be prefixed with NEXT_PUBLIC_
+   - This makes them accessible in the browser
+   - Only add NEXT_PUBLIC_ to non-sensitive data
+
+3. After deployment, you may need to redeploy both services
+   - Deploy backend first
+   - Deploy frontend with backend URL
+   - Update CORS_ORIGIN on backend with frontend URL
+
+4. For Render free tier:
+   - Service may spin down after inactivity
+   - First request after inactivity will be slow (cold start)
+   - Consider keeping it awake with a cron job if needed
+
+5. Vercel automatically rebuilds on Git push
+   - Changes to main branch trigger automatic deployment
+   - You can also manually redeploy from Vercel dashboard
+
+6. To get Supabase credentials:
+   - Go to https://supabase.com
+   - Select your project
+   - Go to Settings > API
+   - Copy URL, anon key, and JWT secret
+
+7. For production security:
+   - Use strong JWT secrets
+   - Keep API keys secure
+   - Enable Supabase RLS (Row Level Security)
+   - Consider rate limiting on backend
+
+===============================================================================
+TROUBLESHOOTING
+===============================================================================
+
+CORS Errors:
+- Make sure CORS_ORIGIN on Render matches your Vercel URL exactly
+- No trailing slash in URLs
+- Redeploy backend after updating CORS_ORIGIN
+
+API Connection Errors:
+- Verify NEXT_PUBLIC_API_URL is correct on Vercel
+- Check if Render backend is running
+- Test backend health endpoint: https://your-app.onrender.com/health
+
+Database Connection Errors:
+- Verify DATABASE_URL is correct
+- Check if database service is running
+- Ensure database allows connections from Render's IP range
+
+Supabase Auth Errors:
+- Verify all Supabase credentials are correct
+- Check if Supabase project is active
+- Ensure SUPABASE_JWT_SECRET matches on backend
+
+Build Errors:
+- Check build logs on Vercel/Render
+- Ensure all dependencies are in package.json/go.mod
+- Verify Go/Node versions are compatible
+
+===============================================================================
+USEFUL COMMANDS
+===============================================================================
+
+Test backend locally:
+cd be
+go run main.go
+
+Test frontend locally:
+cd fe
+npm run dev
+
+Build backend:
+cd be
+go build -o app
+
+Build frontend:
+cd fe
+npm run build
+
+Check environment variables:
+# Vercel CLI
+vercel env ls
+
+# Render CLI
+render env list
+
+===============================================================================

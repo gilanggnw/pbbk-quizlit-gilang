@@ -23,10 +23,13 @@ func Load() *Config {
 		log.Println("No .env file found, using system environment variables")
 	}
 
+	// Get CORS origin from environment, support multiple origins separated by comma
+	corsOrigin := getEnv("CORS_ORIGIN", "http://localhost:3000")
+
 	return &Config{
 		Port:              getEnv("PORT", "8080"),
 		OpenAIKey:         getEnv("OPENAI_API_KEY", ""),
-		CorsOrigin:        getEnv("CORS_ORIGIN", "http://localhost:3000"),
+		CorsOrigin:        corsOrigin,
 		DatabaseURL:       getEnv("DATABASE_URL", ""),
 		SupabaseURL:       getEnv("SUPABASE_URL", ""),
 		SupabaseAnonKey:   getEnv("SUPABASE_ANON_KEY", ""),
