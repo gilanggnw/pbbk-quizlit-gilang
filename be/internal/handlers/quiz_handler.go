@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"pbkk-quizlit-backend/internal/middleware"
 	"pbkk-quizlit-backend/internal/models"
 	"pbkk-quizlit-backend/internal/services"
 	"strings"
@@ -96,8 +97,11 @@ func (h *QuizHandler) UploadFileAndGenerateQuiz(c *gin.Context) {
 		return
 	}
 
+	// Get user ID from context
+	userID := middleware.GetUserID(c)
+
 	// Save quiz
-	err = h.quizService.CreateQuiz(quiz)
+	err = h.quizService.CreateQuiz(quiz, userID)
 	if err != nil {
 		h.logger.Errorf("Failed to save quiz: %v", err)
 		c.JSON(http.StatusInternalServerError, models.APIResponse{
@@ -146,8 +150,11 @@ func (h *QuizHandler) GenerateQuizFromText(c *gin.Context) {
 		quiz = h.generateFallbackQuiz(req.Content, quizReq)
 	}
 
+	// Get user ID from context
+	userID := middleware.GetUserID(c)
+
 	// Save quiz
-	err = h.quizService.CreateQuiz(quiz)
+	err = h.quizService.CreateQuiz(quiz, userID)
 	if err != nil {
 		h.logger.Errorf("Failed to save quiz: %v", err)
 		c.JSON(http.StatusInternalServerError, models.APIResponse{
@@ -168,7 +175,7 @@ func (h *QuizHandler) GenerateQuizFromText(c *gin.Context) {
 // GetQuiz returns a specific quiz
 func (h *QuizHandler) GetQuiz(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	quiz, err := h.quizService.GetQuiz(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, models.APIResponse{
@@ -206,7 +213,7 @@ func (h *QuizHandler) GetAllQuizzes(c *gin.Context) {
 // UpdateQuiz updates an existing quiz
 func (h *QuizHandler) UpdateQuiz(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	var updates models.Quiz
 	if err := c.ShouldBindJSON(&updates); err != nil {
 		c.JSON(http.StatusBadRequest, models.APIResponse{
@@ -234,7 +241,7 @@ func (h *QuizHandler) UpdateQuiz(c *gin.Context) {
 // DeleteQuiz deletes a quiz
 func (h *QuizHandler) DeleteQuiz(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	err := h.quizService.DeleteQuiz(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, models.APIResponse{
@@ -253,7 +260,7 @@ func (h *QuizHandler) DeleteQuiz(c *gin.Context) {
 // generateFallbackQuiz creates a quiz when AI service fails
 func (h *QuizHandler) generateFallbackQuiz(content string, req *models.QuizGenerationRequest) *models.Quiz {
 	h.logger.Info("Generating fallback quiz")
-	
+
 	// Generate sample questions based on content
 	questions := []models.Question{
 		{
@@ -346,17 +353,17 @@ func (h *QuizHandler) extractMainTopic(content string) string {
 	if len(words) == 0 {
 		return "the uploaded material"
 	}
-	
+
 	// Take first few words as topic, max 6 words
 	maxWords := 6
 	if len(words) < maxWords {
 		maxWords = len(words)
 	}
-	
+
 	topic := strings.Join(words[:maxWords], " ")
 	if len(topic) > 50 {
 		topic = topic[:50] + "..."
 	}
-	
+
 	return topic
 }

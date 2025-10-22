@@ -1,14 +1,72 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
+	"os"
 	"pbkk-quizlit-backend/internal/api"
 	"pbkk-quizlit-backend/internal/config"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Define command-line flags
+	var (
+		legacyMode = flag.Bool("legacy", false, "Run in legacy mode with separate services")
+		serverMode = flag.Bool("server", false, "Run as PDF parser HTTP server (legacy)")
+		authMode   = flag.Bool("auth", false, "Run as authentication HTTP server (legacy)")
+		quizMode   = flag.Bool("quiz", false, "Run as quiz HTTP server (legacy)")
+		port       = flag.String("port", "", "Server port (overrides config)")
+		uploadDir  = flag.String("upload-dir", "./uploads", "Upload directory for PDF server mode")
+		filePath   = flag.String("file", "", "Path to the PDF file to parse (CLI mode)")
+		infoOnly   = flag.Bool("info", false, "Show only PDF information without extracting text (CLI mode)")
+		help       = flag.Bool("help", false, "Show help message")
+	)
+	flag.Parse()
+
+	// Show help if requested
+	if *help {
+		showHelp()
+		return
+	}
+
+	// CLI mode for PDF parsing
+	if *filePath != "" {
+		runCLI(*filePath, *infoOnly)
+		return
+	}
+
+	// Legacy mode - run individual services
+	if *legacyMode || *authMode || *quizMode || *serverMode {
+		portToUse := *port
+		if portToUse == "" {
+			portToUse = "8080"
+		}
+
+		if *authMode {
+			runAuthServer(portToUse)
+			return
+		}
+
+		if *quizMode {
+			runQuizServer(portToUse)
+			return
+		}
+
+		if *serverMode {
+			runServer(portToUse, *uploadDir)
+			return
+		}
+	}
+
+	// Default: Run unified server
+	runUnifiedServer(*port)
+}
+
+func runUnifiedServer(portOverride string) {
 	// Load environment variables
 	err := godotenv.Load()
 	if err != nil {
@@ -18,64 +76,18 @@ func main() {
 	// Initialize configuration
 	cfg := config.Load()
 
-	// Initialize and start the server
+	// Override port if provided
+	if portOverride != "" {
+		cfg.Port = portOverride
+	}
+
+	// Initialize and start the unified server
 	server := api.NewServer(cfg)
-	
-	log.Printf("Starting server on port %s", cfg.Port)
+
+	log.Printf("Starting unified server on port %s", cfg.Port)
 	if err := server.Start(); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
-}
-package main
-
-import (
-	"flag"
-	"fmt"
-	"log"
-	"os"
-	"strings"
-)
-
-func main() {
-	// Check if running as server or CLI
-	var (
-		serverMode = flag.Bool("server", false, "Run as PDF parser HTTP server")
-		authMode   = flag.Bool("auth", false, "Run as authentication HTTP server")
-		quizMode   = flag.Bool("quiz", false, "Run as quiz HTTP server")
-		port       = flag.String("port", "8080", "Server port (only for server mode)")
-		uploadDir  = flag.String("upload-dir", "./uploads", "Upload directory for PDF server mode")
-		filePath   = flag.String("file", "", "Path to the PDF file to parse (CLI mode)")
-		infoOnly   = flag.Bool("info", false, "Show only PDF information without extracting text (CLI mode)")
-		help       = flag.Bool("help", false, "Show help message")
-	)
-	flag.Parse()
-
-	// Show help if requested or no arguments provided
-	if *help || len(os.Args) == 1 {
-		showHelp()
-		return
-	}
-
-	// Authentication server mode
-	if *authMode {
-		runAuthServer(*port)
-		return
-	}
-
-	// Quiz server mode
-	if *quizMode {
-		runQuizServer(*port)
-		return
-	}
-
-	// PDF server mode
-	if *serverMode {
-		runServer(*port, *uploadDir)
-		return
-	}
-
-	// CLI mode
-	runCLI(*filePath, *infoOnly)
 }
 
 func runAuthServer(port string) {
@@ -141,49 +153,54 @@ func showHelp() {
 	fmt.Println("Quizlit Backend API")
 	fmt.Println("===================")
 	fmt.Println()
-	fmt.Println("A multi-purpose backend server for PDF parsing and user authentication.")
+	fmt.Println("A multi-purpose backend server for quiz generation with PDF parsing and user authentication.")
 	fmt.Println()
-	fmt.Println("Authentication Server Mode:")
-	fmt.Println("  go run *.go -auth")
-	fmt.Println("  go run *.go -auth -port 8080")
+	fmt.Println("Default Mode (Unified Server):")
+	fmt.Println("  go run *.go                    # Runs all services on configured port (default: 8080)")
+	fmt.Println("  go run *.go -port 8081         # Runs all services on port 8081")
 	fmt.Println()
-	fmt.Println("PDF Server Mode:")
-	fmt.Println("  go run *.go -server")
-	fmt.Println("  go run *.go -server -port 8080 -upload-dir ./uploads")
+	fmt.Println("Legacy Modes (Individual Services):")
+	fmt.Println("  go run *.go -auth              # Run only authentication server")
+	fmt.Println("  go run *.go -quiz              # Run only quiz server")
+	fmt.Println("  go run *.go -server            # Run only PDF parser server")
+	fmt.Println("  go run *.go -auth -port 8080   # With custom port")
 	fmt.Println()
-	fmt.Println("CLI Mode:")
-	fmt.Println("  go run *.go -file <path_to_pdf>")
-	fmt.Println("  go run *.go -file <path_to_pdf> -info")
+	fmt.Println("CLI Mode (PDF Parsing):")
+	fmt.Println("  go run *.go -file <path_to_pdf>        # Extract text from PDF")
+	fmt.Println("  go run *.go -file <path_to_pdf> -info  # Show PDF info only")
 	fmt.Println()
 	fmt.Println("Options:")
-	fmt.Println("  -auth             Run as authentication HTTP server")
-	fmt.Println("  -server           Run as PDF parser HTTP server")
-	fmt.Println("  -port string      Server port (default: 8080)")
+	fmt.Println("  -port string      Server port (default: from config or 8080)")
 	fmt.Println("  -upload-dir       Upload directory for PDF server mode (default: ./uploads)")
 	fmt.Println("  -file string      Path to the PDF file to parse (CLI mode)")
 	fmt.Println("  -info             Show only PDF information without extracting text (CLI mode)")
+	fmt.Println("  -legacy           Force legacy mode with separate services")
+	fmt.Println("  -auth             Run as authentication HTTP server (legacy)")
+	fmt.Println("  -quiz             Run as quiz HTTP server (legacy)")
+	fmt.Println("  -server           Run as PDF parser HTTP server (legacy)")
 	fmt.Println("  -help             Show this help message")
 	fmt.Println()
-	fmt.Println("Auth API Endpoints:")
-	fmt.Println("  POST /api/auth/register  - Register new user")
-	fmt.Println("  POST /api/auth/login     - Login user")
-	fmt.Println("  GET  /api/auth/profile   - Get user profile (protected)")
-	fmt.Println("  GET  /api/auth/health    - Health check")
-	fmt.Println()
-	fmt.Println("PDF API Endpoints:")
-	fmt.Println("  GET  /api/health         - Health check")
-	fmt.Println("  POST /api/pdf/upload     - Upload and extract text from PDF")
-	fmt.Println("  POST /api/pdf/info       - Get PDF information only")
+	fmt.Println("Unified API Endpoints (Default Mode):")
+	fmt.Println("  GET  /health                       - Health check")
+	fmt.Println("  POST /api/v1/quizzes/upload        - Upload PDF and generate quiz")
+	fmt.Println("  POST /api/v1/quizzes/generate      - Generate quiz from text")
+	fmt.Println("  GET  /api/v1/quizzes/              - List all quizzes")
+	fmt.Println("  GET  /api/v1/quizzes/:id           - Get quiz by ID")
+	fmt.Println("  PUT  /api/v1/quizzes/:id           - Update quiz")
+	fmt.Println("  DELETE /api/v1/quizzes/:id         - Delete quiz")
 	fmt.Println()
 	fmt.Println("Examples:")
-	fmt.Println("  # Start auth server")
-	fmt.Println("  go run *.go -auth")
+	fmt.Println("  # Start unified server (recommended)")
+	fmt.Println("  go run *.go")
 	fmt.Println()
-	fmt.Println("  # Start PDF server")
-	fmt.Println("  go run *.go -server")
+	fmt.Println("  # Start unified server on custom port")
+	fmt.Println("  go run *.go -port 8081")
 	fmt.Println()
-	fmt.Println("  # CLI mode")
+	fmt.Println("  # CLI mode to parse PDF")
 	fmt.Println("  go run *.go -file document.pdf")
+	fmt.Println()
+	fmt.Println("  # Legacy: Run only auth server")
+	fmt.Println("  go run *.go -auth -port 3000")
 }
 
 func showPDFInfo(parser *PDFParser, filePath string) error {

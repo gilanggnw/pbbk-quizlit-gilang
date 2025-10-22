@@ -1,19 +1,7 @@
 import { supabase } from './supabaseClient'
+import { User } from '@supabase/supabase-js'
 
-export interface User {
-  id: string
-  email?: string
-  user_metadata?: {
-    display_name?: string
-    phone?: string
-  }
-  app_metadata?: {
-    provider?: string
-    providers?: string[]
-  }
-  created_at?: string
-  last_sign_in_at?: string
-}
+export type { User }
 
 export interface SignUpCredentials {
   email: string

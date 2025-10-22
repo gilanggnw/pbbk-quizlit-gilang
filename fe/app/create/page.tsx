@@ -217,6 +217,35 @@ export default function CreateQuiz() {
             <h2 className="text-2xl font-bold text-white mb-6">Quiz Details</h2>
             <p className="text-gray-400 mb-6">Give your quiz a name and description</p>
             
+            {/* Uploaded File Display */}
+            {uploadedFile && (
+              <div className="mb-6 bg-gray-700 rounded-lg p-4 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-white font-medium">{uploadedFile.name}</p>
+                    <p className="text-gray-400 text-sm">{(uploadedFile.size / 1024).toFixed(2)} KB</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setUploadedFile(null);
+                    setShowQuizDetails(false);
+                  }}
+                  className="text-red-400 hover:text-red-300 p-2"
+                  title="Remove file"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 gap-6">
               <div>
                 <label className="block text-gray-300 text-sm font-medium mb-2">
@@ -280,58 +309,6 @@ export default function CreateQuiz() {
             >
               {isGenerating ? 'Generating Quiz...' : 'Generate Quiz'}
             </button>
-          </div>
-        )}
-
-        {/* Sample Quizzes */}
-        {!showQuizDetails && (
-          <div className="mt-12">
-            <div className="space-y-4">
-              {[
-                {
-                  id: 1,
-                  title: "World Geography",
-                  description: "Explore your knowledge of world geography",
-                  questions: 15,
-                  difficulty: "Easy Difficulty"
-                },
-                {
-                  id: 2,
-                  title: "World Geography", 
-                  description: "Explore your knowledge of world geography",
-                  questions: 15,
-                  difficulty: "Medium Difficulty"
-                },
-                {
-                  id: 3,
-                  title: "World Geography",
-                  description: "Explore your knowledge of world geography", 
-                  questions: 15,
-                  difficulty: "Hard Difficulty"
-                }
-              ].map((quiz, index) => (
-                <div key={quiz.id} className="bg-blue-600 rounded-lg p-6 flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold">{quiz.id}</span>
-                    </div>
-                    <div>
-                      <h3 className="text-white font-semibold">{quiz.title}</h3>
-                      <p className="text-blue-100 text-sm">{quiz.description}</p>
-                      <div className="flex items-center space-x-4 mt-1">
-                        <span className="text-blue-100 text-sm">🗣️ {quiz.questions} questions</span>
-                        <span className="text-blue-100 text-sm">🎯 {quiz.difficulty}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <button className="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg transition-colors">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
-            </div>
           </div>
         )}
       </div>

@@ -1,4 +1,6 @@
 // API configuration
+import { getAccessToken } from './auth';
+
 const API_BASE_URL = typeof window !== 'undefined' 
   ? 'http://localhost:8080/api/v1' 
   : 'http://localhost:8080/api/v1';
@@ -11,15 +13,28 @@ export const API_ENDPOINTS = {
   HEALTH: `${API_BASE_URL.replace('/api/v1', '')}/health`,
 };
 
+// Helper to get auth headers
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const token = await getAccessToken();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  return headers;
+}
+
 // API utility functions
 export const apiClient = {
   // Generic GET request
   async get(url: string) {
+    const headers = await getAuthHeaders();
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -31,11 +46,10 @@ export const apiClient = {
 
   // Generic POST request
   async post(url: string, data: any) {
+    const headers = await getAuthHeaders();
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(data),
     });
 
@@ -48,8 +62,16 @@ export const apiClient = {
 
   // Multipart form POST (for file uploads)
   async postForm(url: string, formData: FormData) {
+    const token = await getAccessToken();
+    const headers: HeadersInit = {};
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch(url, {
       method: 'POST',
+      headers,
       body: formData,
     });
 
@@ -62,11 +84,10 @@ export const apiClient = {
 
   // Generic PUT request
   async put(url: string, data: any) {
+    const headers = await getAuthHeaders();
     const response = await fetch(url, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(data),
     });
 
@@ -79,11 +100,10 @@ export const apiClient = {
 
   // Generic DELETE request
   async delete(url: string) {
+    const headers = await getAuthHeaders();
     const response = await fetch(url, {
       method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {

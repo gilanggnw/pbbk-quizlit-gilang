@@ -4,11 +4,11 @@ import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getQuizForTaking, submitQuizAttempt } from '@/app/lib/quizApi';
-import { getCurrentUser, getAccessToken } from '@/app/lib/auth';
+import { getCurrentUser } from '@/app/lib/auth';
 
 interface Question {
   id: string;
-  question_text: string;
+  text: string;  // Backend returns 'text', not 'question_text'
   options: string[];
 }
 
@@ -37,6 +37,13 @@ export default function StartQuiz({ params }: { params: Promise<{ id: string }> 
   useEffect(() => {
     loadQuiz();
   }, [resolvedParams.id]);
+
+  // Handle redirect to results when quiz is completed
+  useEffect(() => {
+    if (showResults && attemptId) {
+      router.push(`/quiz/results/${attemptId}`);
+    }
+  }, [showResults, attemptId, router]);
 
   const loadQuiz = async () => {
     try {
@@ -90,8 +97,7 @@ export default function StartQuiz({ params }: { params: Promise<{ id: string }> 
 
   const handleSubmitQuiz = async () => {
     try {
-      const token = await getAccessToken();
-      if (!token || !quiz) return;
+      if (!quiz) return;
 
       // Convert answers to backend format
       const answers: { [key: string]: string } = {};
@@ -99,7 +105,7 @@ export default function StartQuiz({ params }: { params: Promise<{ id: string }> 
         answers[q.id] = selectedAnswers[idx] || '';
       });
 
-      const result = await submitQuizAttempt(token, {
+      const result = await submitQuizAttempt({
         quiz_id: resolvedParams.id,
         answers: answers
       });
@@ -113,8 +119,7 @@ export default function StartQuiz({ params }: { params: Promise<{ id: string }> 
   };
 
   if (showResults && attemptId) {
-    // Redirect to results page
-    router.push(`/quiz/results/${attemptId}`);
+    // Show loading while redirecting
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-white text-xl">Redirecting to results...</div>
@@ -186,7 +191,7 @@ export default function StartQuiz({ params }: { params: Promise<{ id: string }> 
         <div className="max-w-4xl mx-auto px-4 py-8">
           <div className="bg-gray-800 rounded-lg p-8">
             <h2 className="text-2xl font-bold text-white mb-8">
-              {currentQuestion.question_text}
+              {currentQuestion.text}
             </h2>
             
             <div className="space-y-4 mb-8">

@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { QuizService } from '../lib/quiz-service';
-import { Quiz as QuizType } from '../lib/types';
 import Header from "../../components/Header";
 import { useRouter } from "next/navigation";
 import { listQuizzes } from "@/app/lib/quizApi";
-import { getCurrentUser, signOut, getUserDisplayName, getUserInitials, User } from "@/app/lib/auth";
+import { getCurrentUser, signOut } from "@/app/lib/auth";
 
 interface Quiz {
   id: string;
@@ -25,9 +23,6 @@ export default function Dashboard() {
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Check authentication and load data
   useEffect(() => {
@@ -39,17 +34,6 @@ export default function Dashboard() {
     loadQuizzes();
   }, []);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowProfileDropdown(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   const initializeDashboard = async () => {
     try {
       setLoading(true);
@@ -59,7 +43,6 @@ export default function Dashboard() {
         router.push('/login');
         return;
       }
-      setUser(currentUser);
       
       // Load quizzes
       await loadQuizzes();
@@ -78,11 +61,11 @@ export default function Dashboard() {
       const transformedQuizzes = data.quizzes.map(q => ({
         id: q.id,
         title: q.title || 'Untitled Quiz',
-        description: q.pdf_filename || 'No description',
-        questions: q.question_count,
-        createdAt: new Date(q.created_at).toLocaleDateString(),
-        difficulty: "medium" as const, // Default difficulty
-        file: q.pdf_filename
+        description: q.description || q.title || 'No description',
+        questions: q.totalQuestions || 0,
+        createdAt: new Date(q.createdAt).toLocaleDateString(),
+        difficulty: (q.difficulty || "medium") as "easy" | "medium" | "hard",
+        file: q.title
       }));
       setQuizzes(transformedQuizzes);
     } catch (error) {
@@ -149,90 +132,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <Link href="/" className="text-2xl font-bold text-white">
-              QuizLit
-            </Link>
-            <div className="flex items-center space-x-6">
-              <Link href="/create" className="text-gray-300 hover:text-white transition-colors">
-                Create
-              </Link>
-              <Link href="/dashboard" className="text-white font-medium">
-                My Quizzes
-              </Link>
-              <button
-                onClick={loadQuizzes}
-                disabled={loading}
-                className="text-gray-300 hover:text-white transition-colors disabled:opacity-50 flex items-center space-x-1"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span>{loading ? 'Loading...' : 'Refresh'}</span>
-              </button>
-              
-              {/* Profile Dropdown */}
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                  className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors"
-                >
-                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
-                    {getUserInitials(user)}
-                  </div>
-                  <span>{getUserDisplayName(user)}</span>
-                  <svg 
-                    className={`w-4 h-4 transition-transform ${showProfileDropdown ? 'rotate-180' : ''}`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {/* Dropdown Menu */}
-                {showProfileDropdown && (
-                  <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg border border-gray-700 py-1 z-50">
-                    <div className="px-4 py-3 border-b border-gray-700">
-                      <p className="text-sm font-medium text-white">{getUserDisplayName(user)}</p>
-                      <p className="text-xs text-gray-400 truncate">{user?.email}</p>
-                    </div>
-                    <Link
-                      href="/profile"
-                      className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
-                      onClick={() => setShowProfileDropdown(false)}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        <span>Profile</span>
-                      </div>
-                    </Link>
-                    <button
-                      onClick={() => {
-                        setShowProfileDropdown(false);
-                        handleLogout();
-                      }}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                        <span>Logout</span>
-                      </div>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { use } from 'react';
 import { getQuizAttempt } from '@/app/lib/quizApi';
-import { getAccessToken } from '@/app/lib/auth';
+import { getCurrentUser } from '@/app/lib/auth';
 
 interface QuestionResult {
   id: number;
@@ -29,13 +29,13 @@ export default function QuizResultsPage({ params }: { params: Promise<{ id: stri
   const loadResults = async () => {
     try {
       setLoading(true);
-      const token = await getAccessToken();
-      if (!token) {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
         router.push('/login');
         return;
       }
 
-      const result = await getQuizAttempt(token, resolvedParams.id);
+      const result = await getQuizAttempt(resolvedParams.id);
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load results');
@@ -164,7 +164,7 @@ export default function QuizResultsPage({ params }: { params: Promise<{ id: stri
           {questions.map((question: any, index: number) => {
             const userAnswer = userAnswers[question.id.toString()];
             const isCorrect = userAnswer === question.correct_answer;
-            const options = JSON.parse(question.options);
+            const options = question.options; // Already an array from backend
 
             return (
               <div
@@ -177,7 +177,7 @@ export default function QuizResultsPage({ params }: { params: Promise<{ id: stri
                     <span className="text-gray-500 mr-2">
                       Question {index + 1}:
                     </span>
-                    {question.question_text}
+                    {question.text}
                   </h3>
                   <div
                     className={`ml-4 px-3 py-1 rounded-full text-sm font-medium ${
