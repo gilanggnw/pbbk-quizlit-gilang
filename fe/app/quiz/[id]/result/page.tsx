@@ -13,38 +13,42 @@ export default function QuizResult({ params }: { params: Promise<{ id: string }>
   const [answers, setAnswers] = useState<number[]>([]);
 
   useEffect(() => {
-    const loadedQuiz = QuizService.getQuizById(id);
-    if (!loadedQuiz) {
-      setQuiz(null);
-      return;
-    }
-    setQuiz(loadedQuiz);
-
-    // Dummy scoring based on difficulty, consistent with History page
-    const targetPercentage = (difficulty: "easy" | "medium" | "hard") => {
-      switch (difficulty) {
-        case "easy":
-          return 90;
-        case "medium":
-          return 75;
-        case "hard":
-          return 50;
-        default:
-          return 80;
+    const loadQuiz = async () => {
+      const loadedQuiz = await QuizService.getQuizById(id);
+      if (!loadedQuiz) {
+        setQuiz(null);
+        return;
       }
+      setQuiz(loadedQuiz);
+
+      // Dummy scoring based on difficulty, consistent with History page
+      const targetPercentage = (difficulty: "easy" | "medium" | "hard") => {
+        switch (difficulty) {
+          case "easy":
+            return 90;
+          case "medium":
+            return 75;
+          case "hard":
+            return 50;
+          default:
+            return 80;
+        }
+      };
+
+      const questions = loadedQuiz.questions;
+      const desired = targetPercentage(loadedQuiz.difficulty);
+      const correctCount = Math.max(0, Math.round((questions.length * desired) / 100));
+
+      const dummyAnswers = questions.map((q, idx) => {
+        if (idx < correctCount) return q.correctAnswer;
+        // pick a wrong answer deterministically
+        const wrong = (q.correctAnswer + 1) % q.options.length;
+        return wrong;
+      });
+      setAnswers(dummyAnswers);
     };
-
-    const questions = loadedQuiz.questions;
-    const desired = targetPercentage(loadedQuiz.difficulty);
-    const correctCount = Math.max(0, Math.round((questions.length * desired) / 100));
-
-    const dummyAnswers = questions.map((q, idx) => {
-      if (idx < correctCount) return q.correctAnswer;
-      // pick a wrong answer deterministically
-      const wrong = (q.correctAnswer + 1) % q.options.length;
-      return wrong;
-    });
-    setAnswers(dummyAnswers);
+    
+    loadQuiz();
   }, [id]);
 
   const score = useMemo(() => {

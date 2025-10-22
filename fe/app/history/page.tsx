@@ -1,12 +1,29 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Header from "../../components/Header";
 import Link from "next/link";
 import Image from "next/image";
 import { QuizService, formatDate } from "../lib/quiz-service";
 
 export default function HistoryPage() {
-  const quizzes = QuizService.getAllQuizzes();
+  const [quizzes, setQuizzes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadQuizzes = async () => {
+      try {
+        const data = await QuizService.getAllQuizzes();
+        setQuizzes(data);
+      } catch (error) {
+        console.error('Failed to load quizzes:', error);
+        setQuizzes([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadQuizzes();
+  }, []);
 
   // Dummy scores based on difficulty to match screenshot style
   const scoreForDifficulty = (difficulty: "easy" | "medium" | "hard") => {
@@ -21,6 +38,14 @@ export default function HistoryPage() {
         return 80;
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-white">Loading history...</div>
+      </div>
+    );
+  }
 
   const totalQuizzes = quizzes.length;
   const scores = quizzes.map((q) => scoreForDifficulty(q.difficulty));

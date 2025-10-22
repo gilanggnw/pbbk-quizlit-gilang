@@ -25,58 +25,6 @@ export default function Dashboard() {
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(false);
-
-  // Load quizzes function
-  const loadQuizzes = async () => {
-    setLoading(true);
-    try {
-      console.log('Fetching quizzes from API...');
-      const apiQuizzes = await QuizService.getAllQuizzes();
-      console.log('API response:', apiQuizzes);
-      
-      // Convert API quizzes to dashboard format
-      const formattedQuizzes = apiQuizzes.map(quiz => ({
-        id: quiz.id,
-        title: quiz.title,
-        description: quiz.description,
-        questions: quiz.totalQuestions,
-        createdAt: quiz.createdAt ? quiz.createdAt.split('T')[0] : new Date().toLocaleDateString(),
-        difficulty: quiz.difficulty as "easy" | "medium" | "hard",
-      }));
-      
-      console.log('Formatted quizzes:', formattedQuizzes);
-      setQuizzes(formattedQuizzes);
-    } catch (error) {
-      console.error('Failed to load quizzes:', error);
-      // Fallback to default quizzes
-      const defaultQuizzes = [
-        {
-          id: "1",
-          title: "World Geography",
-          description: "Explore your knowledge of world geography",
-          questions: 15,
-          createdAt: "24/04/2025",
-          difficulty: "easy" as const,
-        },
-        {
-          id: "2",
-          title: "World Geography Advanced",
-          description: "Advanced questions about world geography",
-          questions: 20,
-          createdAt: "24/04/2025",
-          difficulty: "hard" as const,
-        },
-      ];
-      setQuizzes(defaultQuizzes);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load quizzes on component mount
-  useEffect(() => {
-    loadQuizzes();
-  const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -84,6 +32,11 @@ export default function Dashboard() {
   // Check authentication and load data
   useEffect(() => {
     initializeDashboard();
+  }, []);
+
+  // Load quizzes on component mount
+  useEffect(() => {
+    loadQuizzes();
   }, []);
 
   // Close dropdown when clicking outside
@@ -196,7 +149,6 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Header */}
-      <Header />
       <header className="bg-gray-800 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
@@ -220,14 +172,6 @@ export default function Dashboard() {
                 </svg>
                 <span>{loading ? 'Loading...' : 'Refresh'}</span>
               </button>
-              <div className="flex items-center space-x-2 text-white">
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
-                  JD
-                </div>
-                <span>John Doe</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
               
               {/* Profile Dropdown */}
               <div className="relative" ref={dropdownRef}>
