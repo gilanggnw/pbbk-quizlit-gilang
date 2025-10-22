@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Header from "../../components/Header";
+import { useRouter } from "next/navigation";
+import { listQuizzes } from "@/app/lib/quizApi";
+import { getCurrentUser, signOut, getUserDisplayName, getUserInitials, User } from "@/app/lib/auth";
 
 interface Quiz {
   id: string;
@@ -15,33 +18,80 @@ interface Quiz {
 }
 
 export default function Dashboard() {
+  const router = useRouter();
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Load quizzes on component mount
+  // Check authentication and load data
   useEffect(() => {
-    const savedQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
-    const defaultQuizzes = [
-      {
-        id: "1",
-        title: "World Geography",
-        description: "Explore your knowledge of world geography",
-        questions: 15,
-        createdAt: "24/04/2025",
-        difficulty: "easy" as const,
-      },
-      {
-        id: "2",
-        title: "World Geography Advanced",
-        description: "Advanced questions about world geography",
-        questions: 20,
-        createdAt: "24/04/2025",
-        difficulty: "hard" as const,
-      },
-    ];
-    setQuizzes([...savedQuizzes, ...defaultQuizzes]);
+    initializeDashboard();
   }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowProfileDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const initializeDashboard = async () => {
+    try {
+      setLoading(true);
+      // Check if user is authenticated
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        router.push('/login');
+        return;
+      }
+      setUser(currentUser);
+      
+      // Load quizzes
+      await loadQuizzes();
+    } catch (error) {
+      console.error('Failed to initialize dashboard:', error);
+      router.push('/login');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadQuizzes = async () => {
+    try {
+      const data = await listQuizzes(20, 0);
+      // Transform backend data to match UI interface
+      const transformedQuizzes = data.quizzes.map(q => ({
+        id: q.id,
+        title: q.title || 'Untitled Quiz',
+        description: q.pdf_filename || 'No description',
+        questions: q.question_count,
+        createdAt: new Date(q.created_at).toLocaleDateString(),
+        difficulty: "medium" as const, // Default difficulty
+        file: q.pdf_filename
+      }));
+      setQuizzes(transformedQuizzes);
+    } catch (error) {
+      console.error('Failed to load quizzes:', error);
+      setQuizzes([]);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      router.push('/login');
+    } catch (error) {
+      console.error('Failed to sign out:', error);
+    }
+  };
 
   const handleEditQuiz = (quiz: Quiz) => {
     setEditingQuiz(quiz);
@@ -53,9 +103,8 @@ export default function Dashboard() {
     if (editingQuiz) {
       const updatedQuizzes = quizzes.map(q => q.id === editingQuiz.id ? editingQuiz : q);
       setQuizzes(updatedQuizzes);
-      // Update localStorage
-      const savedQuizzes = updatedQuizzes.filter(q => !['1', '2'].includes(q.id));
-      localStorage.setItem('quizzes', JSON.stringify(savedQuizzes));
+      // Note: Backend update would go here
+      // For now just update local state
       setShowEditModal(false);
       setEditingQuiz(null);
     }
@@ -65,9 +114,8 @@ export default function Dashboard() {
     if (confirm('Are you sure you want to delete this quiz?')) {
       const updatedQuizzes = quizzes.filter(q => q.id !== id);
       setQuizzes(updatedQuizzes);
-      // Update localStorage (only save non-default quizzes)
-      const savedQuizzes = updatedQuizzes.filter(q => !['1', '2'].includes(q.id));
-      localStorage.setItem('quizzes', JSON.stringify(savedQuizzes));
+      // Note: Backend delete would go here
+      // For now just update local state
     }
   };
 
@@ -95,6 +143,80 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-900">
       {/* Header */}
       <Header />
+      <header className="bg-gray-800 border-b border-gray-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <Link href="/" className="text-2xl font-bold text-white">
+              QuizLit
+            </Link>
+            <div className="flex items-center space-x-6">
+              <Link href="/create" className="text-gray-300 hover:text-white transition-colors">
+                Create
+              </Link>
+              <Link href="/dashboard" className="text-white font-medium">
+                My Quizzes
+              </Link>
+              
+              {/* Profile Dropdown */}
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                  className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors"
+                >
+                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
+                    {getUserInitials(user)}
+                  </div>
+                  <span>{getUserDisplayName(user)}</span>
+                  <svg 
+                    className={`w-4 h-4 transition-transform ${showProfileDropdown ? 'rotate-180' : ''}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Dropdown Menu */}
+                {showProfileDropdown && (
+                  <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg border border-gray-700 py-1 z-50">
+                    <div className="px-4 py-3 border-b border-gray-700">
+                      <p className="text-sm font-medium text-white">{getUserDisplayName(user)}</p>
+                      <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+                    </div>
+                    <Link
+                      href="/profile"
+                      className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                      onClick={() => setShowProfileDropdown(false)}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span>Profile</span>
+                      </div>
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setShowProfileDropdown(false);
+                        handleLogout();
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        <span>Logout</span>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
@@ -155,7 +277,17 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        {quizzes.length === 0 ? (
+        {loading ? (
+          <div className="bg-gray-800 rounded-lg p-12 text-center">
+            <div className="w-16 h-16 bg-gray-700 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <svg className="animate-spin w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-2">Loading quizzes...</h3>
+          </div>
+        ) : quizzes.length === 0 ? (
           <div className="bg-gray-800 rounded-lg p-12 text-center">
             <div className="w-16 h-16 bg-gray-700 rounded-full mx-auto mb-4 flex items-center justify-center">
               <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
