@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { QuizService, calculateQuizScore } from '../../lib/quiz-service';
 import { Quiz, QuizQuestion } from '../../lib/types';
 
-export default function StartQuiz({ params }: { params: { id: string } }) {
+export default function StartQuiz({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [selectedMode, setSelectedMode] = useState<'practice' | 'challenge' | null>(null);
   const [showQuiz, setShowQuiz] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -15,9 +16,9 @@ export default function StartQuiz({ params }: { params: { id: string } }) {
 
   // Load quiz data
   useEffect(() => {
-    const loadedQuiz = QuizService.getQuizById(params.id);
+    const loadedQuiz = QuizService.getQuizById(id);
     setQuiz(loadedQuiz || null);
-  }, [params.id]);
+  }, [id]);
 
   if (!quiz) {
     return (
