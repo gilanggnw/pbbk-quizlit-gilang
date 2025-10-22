@@ -11,10 +11,15 @@ export interface Quiz {
 
 export interface QuizQuestion {
   id: string;
-  question: string;
+  type: string;
+  text: string;
+  question?: string; // Keep for backward compatibility
   options: string[];
+  correct: string;
   correctAnswer: number;
+  points: number;
   explanation?: string;
+  metadata?: any;
 }
 
 export interface QuizAttempt {

@@ -1,0 +1,23 @@
+Probability Theory and Conditional Probability
+
+Conditional probability is a fundamental concept in probability theory. It represents the probability of an event occurring given that another event has already occurred. The conditional probability of event A given event B is denoted as P(A|B).
+
+Key Formulas:
+- Conditional Probability: P(A|B) = P(A ∩ B) / P(B)
+- Marginal Probability: The probability of an event regardless of other events
+- Joint Probability: The probability of two or more events occurring together
+
+Probability Paths:
+In probability trees, we can trace paths from initial events to final outcomes. Each path represents a sequence of conditional probabilities. The probability of a complete path is the product of all conditional probabilities along that path.
+
+Vector Fields and Probability:
+In advanced probability theory, vector fields can represent probability distributions over multidimensional spaces. Each vector in the field indicates the direction and magnitude of probability flow.
+
+Key Terminology:
+- "Conditional" = Per single data point
+- "Marginal" = Across distribution of data points
+- Probability Paths: The path from noise to data in statistical models
+- Score Functions: Used to evaluate the likelihood of different outcomes
+
+Applications:
+Conditional probability is essential in machine learning, statistics, and data science. It helps us understand relationships between variables and make predictions based on observed data.

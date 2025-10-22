@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import Link from "next/link";
+import { generateQuizFromFile, generateQuizFromContent } from '../lib/quiz-service';
 import Header from "../../components/Header";
 // Removed import as we're using direct implementation
 
@@ -60,12 +61,6 @@ export default function CreateQuiz() {
     console.log('uploadedFile:', uploadedFile);
     console.log('quizDetails:', quizDetails);
 
-    // For testing - make file upload optional
-    // if (!uploadedFile) {
-    //   alert('Please upload a file first');
-    //   return;
-    // }
-
     if (!quizDetails.title || !quizDetails.description) {
       alert('Please fill in all quiz details');
       return;
@@ -74,29 +69,30 @@ export default function CreateQuiz() {
     setIsGenerating(true);
 
     try {
-      // For now, just create a simple mock quiz
-      const mockQuiz = {
-        id: Date.now().toString(),
-        title: quizDetails.title,
-        description: quizDetails.description,
-        difficulty: quizDetails.difficulty,
-        questions: 15,
-        createdAt: new Date().toLocaleDateString('en-US', {
-          day: '2-digit',
-          month: '2-digit', 
-          year: 'numeric'
-        }),
-        file: uploadedFile?.name || 'No file uploaded'
-      };
+      let quiz;
+      
+      if (uploadedFile) {
+        // Use file upload API
+        quiz = await generateQuizFromFile(uploadedFile, {
+          title: quizDetails.title,
+          description: quizDetails.description,
+          difficulty: quizDetails.difficulty,
+          questionCount: 10,
+        });
+      } else {
+        // Use text generation API with placeholder content
+        quiz = await generateQuizFromContent(
+          "Please generate a general knowledge quiz about " + quizDetails.title,
+          {
+            title: quizDetails.title,
+            description: quizDetails.description,
+            difficulty: quizDetails.difficulty,
+            questionCount: 10,
+          }
+        );
+      }
 
-      console.log('Creating quiz:', mockQuiz);
-
-      // Save to localStorage for demonstration
-      const existingQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
-      existingQuizzes.unshift(mockQuiz);
-      localStorage.setItem('quizzes', JSON.stringify(existingQuizzes));
-
-      console.log('Quiz saved to localStorage');
+      console.log('Quiz generated successfully:', quiz);
       alert('Quiz created successfully!');
       
       // Redirect to dashboard

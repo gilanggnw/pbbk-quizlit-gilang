@@ -50,6 +50,40 @@ A modern quiz application that allows users to upload PDF files and generate qui
 ### Prerequisites
 - Node.js v18 or higher
 - Go v1.19 or higher
+
+### Quick Start
+
+#### 1. Start the Frontend (Next.js)
+```bash
+# Navigate to frontend directory
+cd fe
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+```
+The frontend will be available at: **http://localhost:3000**
+
+#### 2. Start the Backend (Go)
+```bash
+# Navigate to backend directory
+cd be
+
+# Run the pre-built executable
+.\pbkk-quizlit-backend.exe
+
+# OR build and run from source
+go run main.go
+```
+The backend will be available at: **http://localhost:8080**
+
+### 🚀 Application URLs
+- **Main App**: http://localhost:3000
+- **Dashboard**: http://localhost:3000/dashboard
+- **Sample Quiz**: http://localhost:3000/quiz/1
+- **Backend API**: http://localhost:8080/api/v1/quizzes/
 - Supabase Account (free tier available)
 
 ### 1. Clone the Repository

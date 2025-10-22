@@ -1,30 +1,18 @@
-# Quizlit Backend API
+# Backend API - Golang
 
-A Go-based backend server for the Quizlit application with PDF text extraction and user authentication capabilities.
+## Overview
+This is a backend API service built with Go (Golang) for the QuizLit quiz generation platform.
 
-## 🚀 Features
+## Features
+- 🤖 AI-powered quiz generation using OpenAI GPT
+- 📄 File upload support (PDF, TXT, DOCX)
+- 🎯 Multiple difficulty levels (Easy, Medium, Hard)
+- 🔄 RESTful API endpoints
+- ⚡ Fast and lightweight backend
 
-### PDF Processing
-- ✅ Extract text from PDF files via REST API
-- ✅ Get PDF metadata (file size, page count, etc.)
-- ✅ File upload with validation (up to 100MB)
-- ✅ Automatic cleanup after processing
-
-### User Authentication
-- ✅ User registration with secure password hashing (bcrypt)
-- ✅ JWT-based authentication
-- ✅ Protected API endpoints
-- ✅ Supabase PostgreSQL integration
-
-### CLI Tools
-- ✅ Command-line PDF text extraction
-- ✅ Multiple server modes
-- ✅ Cross-platform compatibility
-
-## 📋 Prerequisites
-
+## Prerequisites
 - Go 1.19 or higher
-- PostgreSQL database (Supabase recommended)
+- OpenAI API Key
 - Git
 
 ## 🔧 Installation & Setup
@@ -41,12 +29,15 @@ A Go-based backend server for the Quizlit application with PDF text extraction a
    go mod tidy
    ```
 
-3. Configure environment variables:
+3. Set up environment variables:
+```bash
+cp .env.example .env
+```
 
-   ```bash
-   cp .env.example .env
-   # Edit .env with your Supabase credentials
-   ```
+4. Edit `.env` file and add your OpenAI API key:
+```bash
+OPENAI_API_KEY=your_api_key_here
+```
 
 ## 🎯 Server Modes
 
@@ -73,120 +64,76 @@ Endpoints available at `http://localhost:8080`:
 Start the PDF processing API server:
 
 ```bash
-go run *.go -server
+go build -o app
+./app
 ```
 
-Endpoints available at `http://localhost:8080`:
-- `POST /api/pdf/upload` - Upload and extract text from PDF
-- `POST /api/pdf/info` - Get PDF metadata
-- `GET /health` - Health check
+## API Endpoints
 
-### 3. CLI Mode (PDF Extraction)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET    | `/health` | Health check |
+| POST   | `/api/v1/quizzes/upload` | Upload file and generate quiz |
+| POST   | `/api/v1/quizzes/generate` | Generate quiz from text content |
+| GET    | `/api/v1/quizzes` | Get all quizzes |
+| GET    | `/api/v1/quizzes/:id` | Get specific quiz |
+| PUT    | `/api/v1/quizzes/:id` | Update quiz |
+| DELETE | `/api/v1/quizzes/:id` | Delete quiz |
 
-Extract text from PDF files directly:
+## Environment Variables
 
-```bash
-# Extract text
-go run *.go -file "path/to/document.pdf"
-
-# Show PDF info only
-go run *.go -file "path/to/document.pdf" -info
-
-# Show help
-go run *.go -help
-```
-
-## 📝 Command Line Options
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `-auth` | Run as authentication server | - |
-| `-server` | Run as PDF processing server | - |
-| `-port` | Server port | `8080` |
-| `-file` | Path to PDF file (CLI mode) | - |
-| `-info` | Show PDF info only (CLI mode) | `false` |
-| `-upload-dir` | Upload directory for PDF server | `./uploads` |
-| `-help` | Show help message | - |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | Server port | `8080` |
+| `OPENAI_API_KEY` | OpenAI API key for AI generation | Required |
+| `CORS_ORIGIN` | Allowed CORS origin | `http://localhost:3000` |
 
 ## 🏗️ Project Structure
 
 ```text
 be/
-├── main.go                   # Application entry point
-├── config.go                 # Configuration and database
-├── models.go                 # Data models
-├── errors.go                 # Error definitions
-│
-├── auth.go                   # JWT authentication & middleware
-├── auth_server.go            # Auth HTTP server
-├── auth_handlers.go          # Auth endpoint handlers
-│
-├── pdf_parser.go             # PDF text extraction
-├── api_server.go             # PDF API server
-├── utils.go                  # File validation utilities
-│
-├── docs/                     # Documentation
-│   ├── API_DOCUMENTATION.md
-│   ├── AUTH_API_DOCUMENTATION.md
-│   └── AUTH_SETUP.md
-│
-├── .env.example              # Environment template
-├── .gitignore                # Git ignore rules
-├── go.mod                    # Go module file
-└── README.md                 # This file
+├── cmd/
+├── internal/
+│   ├── api/          # Server setup and routing
+│   ├── config/       # Configuration management
+│   ├── handlers/     # HTTP request handlers
+│   ├── models/       # Data models
+│   └── services/     # Business logic
+├── main.go           # Application entry point
+├── go.mod           # Go module definition
+└── .env.example     # Environment variables template
 ```
 
-## 📚 Documentation
+## Usage Examples
 
-- **[Authentication Setup Guide](docs/AUTH_SETUP.md)** - Complete auth setup with Supabase
-- **[Auth API Documentation](docs/AUTH_API_DOCUMENTATION.md)** - Authentication endpoints reference
-- **[PDF API Documentation](docs/API_DOCUMENTATION.md)** - PDF processing endpoints reference
-
-## 🔒 Security
-
-- Passwords hashed with bcrypt (cost factor 10)
-- JWT tokens with 24-hour expiry
-- CORS enabled for frontend integration
-- Environment-based configuration
-- SQL injection protection via prepared statements
-
-## 🚀 Production Deployment
-
-1. Build the binary:
-
-   ```bash
-   go build -o quizlit-backend
-   ```
-
-2. Run in production:
-
-   ```bash
-   # Authentication server
-   ./quizlit-backend -auth -port 8080
-
-   # PDF server
-   ./quizlit-backend -server -port 8081
-   ```
-
-3. Use a process manager (systemd, PM2, etc.)
-4. Set up reverse proxy (nginx, Caddy) with HTTPS
-5. Configure proper CORS for your domain
-
-## 🧪 Testing
-
+### Upload File and Generate Quiz
 ```bash
-# Test auth server
-go run *.go -auth
-
-# Test PDF server
-go run *.go -server
-
-# Test CLI
-go run *.go -file "test.pdf"
+curl -X POST http://localhost:8080/api/v1/quizzes/upload \
+  -F "file=@your-document.pdf" \
+  -F "title=My Quiz" \
+  -F "description=A quiz about the uploaded content" \
+  -F "difficulty=medium"
 ```
 
-## 🤝 Contributing
+### Generate Quiz from Text
+```bash
+curl -X POST http://localhost:8080/api/v1/quizzes/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Your text content here...",
+    "title": "My Quiz",
+    "description": "Quiz description",
+    "difficulty": "easy",
+    "questionCount": 10
+  }'
+```
 
+### Get All Quizzes
+```bash
+curl http://localhost:8080/api/v1/quizzes
+```
+
+## Contributing
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
