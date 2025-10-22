@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { QuizService } from '../lib/quiz-service';
+import { Quiz as QuizType } from '../lib/types';
 
 interface Quiz {
   id: string;
@@ -17,29 +19,58 @@ export default function Dashboard() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Load quizzes function
+  const loadQuizzes = async () => {
+    setLoading(true);
+    try {
+      console.log('Fetching quizzes from API...');
+      const apiQuizzes = await QuizService.getAllQuizzes();
+      console.log('API response:', apiQuizzes);
+      
+      // Convert API quizzes to dashboard format
+      const formattedQuizzes = apiQuizzes.map(quiz => ({
+        id: quiz.id,
+        title: quiz.title,
+        description: quiz.description,
+        questions: quiz.totalQuestions,
+        createdAt: quiz.createdAt ? quiz.createdAt.split('T')[0] : new Date().toLocaleDateString(),
+        difficulty: quiz.difficulty as "easy" | "medium" | "hard",
+      }));
+      
+      console.log('Formatted quizzes:', formattedQuizzes);
+      setQuizzes(formattedQuizzes);
+    } catch (error) {
+      console.error('Failed to load quizzes:', error);
+      // Fallback to default quizzes
+      const defaultQuizzes = [
+        {
+          id: "1",
+          title: "World Geography",
+          description: "Explore your knowledge of world geography",
+          questions: 15,
+          createdAt: "24/04/2025",
+          difficulty: "easy" as const,
+        },
+        {
+          id: "2",
+          title: "World Geography Advanced",
+          description: "Advanced questions about world geography",
+          questions: 20,
+          createdAt: "24/04/2025",
+          difficulty: "hard" as const,
+        },
+      ];
+      setQuizzes(defaultQuizzes);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Load quizzes on component mount
   useEffect(() => {
-    const savedQuizzes = JSON.parse(localStorage.getItem('quizzes') || '[]');
-    const defaultQuizzes = [
-      {
-        id: "1",
-        title: "World Geography",
-        description: "Explore your knowledge of world geography",
-        questions: 15,
-        createdAt: "24/04/2025",
-        difficulty: "easy" as const,
-      },
-      {
-        id: "2",
-        title: "World Geography Advanced",
-        description: "Advanced questions about world geography",
-        questions: 20,
-        createdAt: "24/04/2025",
-        difficulty: "hard" as const,
-      },
-    ];
-    setQuizzes([...savedQuizzes, ...defaultQuizzes]);
+    loadQuizzes();
   }, []);
 
   const handleEditQuiz = (quiz: Quiz) => {
@@ -106,6 +137,16 @@ export default function Dashboard() {
               <Link href="/dashboard" className="text-white font-medium">
                 My Quizzes
               </Link>
+              <button
+                onClick={loadQuizzes}
+                disabled={loading}
+                className="text-gray-300 hover:text-white transition-colors disabled:opacity-50 flex items-center space-x-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>{loading ? 'Loading...' : 'Refresh'}</span>
+              </button>
               <div className="flex items-center space-x-2 text-white">
                 <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
                   JD
@@ -214,7 +255,7 @@ export default function Dashboard() {
                       </svg>
                     </button>
                     <Link
-                      href={`/quiz/${quiz.id}/preview`}
+                      href={`/quiz/${quiz.id}`}
                       className="p-2 text-gray-400 hover:text-green-400 transition-colors"
                       title="Preview"
                     >

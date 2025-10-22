@@ -1,28 +1,60 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { QuizService, calculateQuizScore } from '../../lib/quiz-service';
 import { Quiz, QuizQuestion } from '../../lib/types';
 
-export default function StartQuiz({ params }: { params: { id: string } }) {
+export default function StartQuiz({ params }: { params: Promise<{ id: string }> }) {
   const [selectedMode, setSelectedMode] = useState<'practice' | 'challenge' | null>(null);
   const [showQuiz, setShowQuiz] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [quiz, setQuiz] = useState<Quiz | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  // Unwrap the params Promise
+  const resolvedParams = use(params);
 
   // Load quiz data
   useEffect(() => {
-    const loadedQuiz = QuizService.getQuizById(params.id);
-    setQuiz(loadedQuiz || null);
-  }, [params.id]);
+    const loadQuiz = async () => {
+      try {
+        setLoading(true);
+        console.log('Loading quiz with ID:', resolvedParams.id);
+        const loadedQuiz = await QuizService.getQuizById(resolvedParams.id);
+        console.log('Loaded quiz:', loadedQuiz);
+        setQuiz(loadedQuiz || null);
+      } catch (error) {
+        console.error('Failed to load quiz:', error);
+        setQuiz(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadQuiz();
+  }, [resolvedParams.id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-white text-xl">Loading quiz...</div>
+      </div>
+    );
+  }
 
   if (!quiz) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-white text-xl">Quiz not found</div>
+        <div className="text-white text-xl">
+          <div>Quiz not found</div>
+          <div className="text-sm mt-2 text-gray-400">Quiz ID: {resolvedParams.id}</div>
+          <Link href="/dashboard" className="text-blue-400 hover:text-blue-300 text-sm block mt-4">
+            ← Back to Dashboard
+          </Link>
+        </div>
       </div>
     );
   }
@@ -147,34 +179,49 @@ export default function StartQuiz({ params }: { params: { id: string } }) {
         <div className="max-w-4xl mx-auto px-4 py-8">
           <div className="bg-gray-800 rounded-lg p-8">
             <h2 className="text-2xl font-bold text-white mb-8">
-              {currentQuestion.question}
+              {currentQuestion.text || currentQuestion.question}
             </h2>
             
             <div className="space-y-4 mb-8">
-              {currentQuestion.options.map((option, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleAnswerSelect(index)}
-                  className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${
-                    selectedAnswers[currentQuestionIndex] === index
-                      ? 'border-blue-500 bg-blue-900/20 text-white'
-                      : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+              {currentQuestion.options && currentQuestion.options.length > 0 ? (
+                currentQuestion.options.map((option, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleAnswerSelect(index)}
+                    className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${
                       selectedAnswers[currentQuestionIndex] === index
-                        ? 'border-blue-500 bg-blue-500'
-                        : 'border-gray-400'
-                    }`}>
-                      {selectedAnswers[currentQuestionIndex] === index && (
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
-                      )}
+                        ? 'border-blue-500 bg-blue-900/20 text-white'
+                        : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                        selectedAnswers[currentQuestionIndex] === index
+                          ? 'border-blue-500 bg-blue-500'
+                          : 'border-gray-400'
+                      }`}>
+                        {selectedAnswers[currentQuestionIndex] === index && (
+                          <div className="w-2 h-2 bg-white rounded-full"></div>
+                        )}
+                      </div>
+                      <span>{option}</span>
                     </div>
-                    <span>{option}</span>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                ))
+              ) : (
+                <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 text-red-300">
+                  <p className="mb-4">⚠️ This question has no options available.</p>
+                  <p className="text-sm text-red-400 mb-4">
+                    This is an older quiz. Please create a new quiz for improved question quality.
+                  </p>
+                  <button
+                    onClick={() => handleAnswerSelect(0)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                  >
+                    Skip this question
+                  </button>
+                </div>
+              )}
             </div>
             
             <div className="flex justify-between">
