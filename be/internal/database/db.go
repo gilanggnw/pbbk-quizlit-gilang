@@ -24,6 +24,9 @@ func Connect(databaseURL string) error {
 		return fmt.Errorf("failed to parse database URL: %w", err)
 	}
 
+	// Disable prepared statement caching to avoid "already exists" errors
+	config.ConnConfig.DefaultQueryExecMode = 3 // QueryExecModeSimpleProtocol
+
 	// Create connection pool
 	DB, err = pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
