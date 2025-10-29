@@ -62,12 +62,15 @@ export async function signInWithEmail(
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
-    options: {
-      persistSession: rememberMe, // Use the rememberMe flag
-    }
   });
 
   if (error) throw error;
+  
+  // Store remember me preference (optional - for UI state)
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('rememberMe', rememberMe ? 'true' : 'false');
+  }
+  
   return data;
 }
 
