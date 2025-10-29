@@ -52,6 +52,26 @@ export async function signIn({ email, password }: SignInCredentials) {
 }
 
 /**
+ * Sign in an existing user with email and password, with remember me option
+ */
+export async function signInWithEmail(
+  email: string, 
+  password: string,
+  rememberMe: boolean = true
+) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+    options: {
+      persistSession: rememberMe, // Use the rememberMe flag
+    }
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+/**
  * Sign out the current user
  */
 export async function signOut() {
