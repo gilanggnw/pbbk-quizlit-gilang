@@ -114,6 +114,7 @@ export async function createQuiz(token: string, quiz: CreateQuizRequest): Promis
 export async function listQuizzes(limit: number = 20, offset: number = 0): Promise<{ quizzes: QuizListItem[]; limit: number; offset: number }> {
   const headers = await getAuthHeaders();
   
+  // Add trailing slash to match backend route
   const response = await fetch(`${API_BASE_URL}/api/v1/quizzes/?limit=${limit}&offset=${offset}`, {
     method: 'GET',
     headers,
@@ -125,8 +126,6 @@ export async function listQuizzes(limit: number = 20, offset: number = 0): Promi
 
   const result = await response.json();
   
-  // Backend returns { success, message, data } format
-  // Transform to expected format
   return {
     quizzes: result.data || [],
     limit,
