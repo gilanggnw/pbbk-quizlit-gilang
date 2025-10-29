@@ -1,119 +1,111 @@
 "use client";
 
-import { use, useEffect, useMemo, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Header from "../../../../components/Header";
-import { QuizService, calculateQuizScore, formatDate, getDifficultyLabel } from "../../../lib/quiz-service";
-import { Quiz, QuizQuestion } from "../../../lib/types";
+import { formatDate, getDifficultyLabel } from "../../../lib/quiz-service";
+import { getQuizAttempt } from "../../../lib/quizApi";
+
+interface AttemptResult {
+  attempt_id: string;
+  quiz_id: string;
+  quiz_title: string;
+  total_questions: number;
+  correct_answers: number;
+  score: number;
+  completed_at: string;
+  results: Array<{
+    question_id: string;
+    question_text: string;
+    user_answer: string;
+    correct_answer: string;
+    is_correct: boolean;
+    options?: string[];
+  }>;
+}
 
 export default function QuizResult({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  const [quiz, setQuiz] = useState<Quiz | null>(null);
-  const [answers, setAnswers] = useState<number[]>([]);
+  const { id: attemptId } = use(params);
+  const router = useRouter();
+  const [attemptData, setAttemptData] = useState<AttemptResult | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadQuiz = async () => {
-      const loadedQuiz = await QuizService.getQuizById(id);
-      if (!loadedQuiz) {
-        setQuiz(null);
-        return;
+    const loadAttempt = async () => {
+      try {
+        setLoading(true);
+        const data: any = await getQuizAttempt(attemptId);
+        // The backend returns the attempt data directly
+        setAttemptData(data);
+      } catch (err) {
+        console.error('Failed to load attempt:', err);
+        setError('Failed to load quiz results');
+      } finally {
+        setLoading(false);
       }
-      setQuiz(loadedQuiz);
-
-      // Dummy scoring based on difficulty, consistent with History page
-      const targetPercentage = (difficulty: "easy" | "medium" | "hard") => {
-        switch (difficulty) {
-          case "easy":
-            return 90;
-          case "medium":
-            return 75;
-          case "hard":
-            return 50;
-          default:
-            return 80;
-        }
-      };
-
-      const questions = loadedQuiz.questions;
-      const desired = targetPercentage(loadedQuiz.difficulty);
-      const correctCount = Math.max(0, Math.round((questions.length * desired) / 100));
-
-      const dummyAnswers = questions.map((q, idx) => {
-        if (idx < correctCount) return q.correctAnswer;
-        // pick a wrong answer deterministically
-        const wrong = (q.correctAnswer + 1) % q.options.length;
-        return wrong;
-      });
-      setAnswers(dummyAnswers);
     };
     
-    loadQuiz();
-  }, [id]);
+    loadAttempt();
+  }, [attemptId]);
 
-  const score = useMemo(() => {
-    if (!quiz) return { percentage: 0, correct: 0, total: 0, score: 0 };
-    return calculateQuizScore(answers, quiz.questions);
-  }, [quiz, answers]);
-
-  if (!quiz) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-white text-xl">Quiz not found</div>
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-white">Loading results...</p>
+        </div>
       </div>
     );
   }
 
-  const difficultyColorHex = (difficulty: string) => {
-    switch (difficulty) {
-      case "easy":
-        return "#2ECC71"; // green
-      case "medium":
-        return "#F1C40F"; // yellow (Normal)
-      case "hard":
-        return "#E74C3C"; // red
-      default:
-        return "#888888";
-    }
-  };
+  if (error || !attemptData) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-white text-xl mb-4">{error || 'Quiz results not found'}</div>
+          <Link href="/history" className="text-blue-400 hover:text-blue-300">
+            ← Back to History
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
-  const percentDeg = Math.min(100, Math.max(0, score.percentage)) * 3.6; // 0..360
+  const percentDeg = Math.min(100, Math.max(0, attemptData.score)) * 3.6; // 0..360
 
   return (
     <div className="min-h-screen bg-gray-900">
       <Header />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-2xl font-bold text-[#625FFF] mb-2">Quiz Result</h1>
-        <p className="text-gray-400 mb-6">{quiz.description}</p>
+        <h1 className="text-2xl font-bold text-white mb-2">Quiz Result</h1>
+        <p className="text-gray-400 mb-6">{attemptData.quiz_title}</p>
 
         {/* Summary Card */}
-        <div className="bg-gray-800 rounded-2xl p-6 border border-gray-700 mb-8">
+        <div className="bg-gray-800 rounded-lg p-6 mb-8">
           <div className="flex items-center justify-between">
             {/* Left: title and stats */}
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-3">
-                <h2 className="text-xl md:text-2xl font-bold text-white">{quiz.title}</h2>
-                <span
-                  className="px-2.5 py-1 rounded-md text-xs font-medium text-black"
-                  style={{ backgroundColor: difficultyColorHex(quiz.difficulty) }}
-                >
-                  {quiz.difficulty === "medium" ? "Normal" : getDifficultyLabel(quiz.difficulty)}
-                </span>
+                <h2 className="text-xl md:text-2xl font-bold text-white">{attemptData.quiz_title}</h2>
               </div>
 
               <div className="flex flex-wrap items-center gap-6 text-gray-300">
                 <div className="flex items-center gap-2">
                   <Image src="/calendar.png" alt="Date" width={20} height={20} className="w-5 h-5" />
-                  <span>{formatDate(quiz.createdAt)}</span>
+                  <span>{new Date(attemptData.completed_at).toLocaleDateString()}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Image src="/question_mark.png" alt="Questions" width={20} height={20} className="w-5 h-5" />
-                  <span>{quiz.totalQuestions} Questions</span>
+                  <span>{attemptData.total_questions} Questions</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Image src="/time.png" alt="Time" width={20} height={20} className="w-5 h-5" />
-                  <span>10 Minutes</span>
+                  <Image src="/check.png" alt="Correct" width={20} height={20} className="w-5 h-5" />
+                  <span>{attemptData.correct_answers} Correct</span>
                 </div>
               </div>
             </div>
@@ -129,7 +121,7 @@ export default function QuizResult({ params }: { params: Promise<{ id: string }>
                 />
                 <div className="absolute inset-2 rounded-full bg-gray-900 flex items-center justify-center">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-white">{score.percentage}%</div>
+                    <div className="text-2xl font-bold text-white">{Math.round(attemptData.score)}%</div>
                     <div className="text-xs text-gray-400">Score</div>
                   </div>
                 </div>
@@ -139,15 +131,16 @@ export default function QuizResult({ params }: { params: Promise<{ id: string }>
         </div>
 
         {/* Questions List */}
-        <div className="space-y-6">
-          {quiz.questions.map((q: QuizQuestion, idx: number) => {
-            const userAnswer = answers[idx];
-            const isCorrect = userAnswer === q.correctAnswer;
+        <div className="space-y-4">
+          {attemptData.results.map((result, idx) => {
+            // Extract options from the result if available, otherwise show user and correct answers
+            const hasOptions = result.options && result.options.length > 0;
+            
             return (
-              <div key={q.id} className="bg-gray-800 rounded-xl border border-gray-700 p-4 relative">
+              <div key={result.question_id} className="bg-gray-800 rounded-lg p-6 relative">
                 {/* correctness badge */}
                 <div className="absolute top-4 right-4">
-                  {isCorrect ? (
+                  {result.is_correct ? (
                     <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
@@ -159,40 +152,54 @@ export default function QuizResult({ params }: { params: Promise<{ id: string }>
                 </div>
 
                 <div className="mb-3">
-                  <h3 className="text-white font-semibold">{idx + 1}. {q.question}</h3>
-                  <p className="text-xs text-gray-400">Options:</p>
+                  <h3 className="text-white font-semibold">{idx + 1}. {result.question_text}</h3>
                 </div>
 
-                <div className="space-y-2">
-                  {q.options.map((opt, i) => {
-                    const isSelected = i === userAnswer;
-                    const isAnswer = i === q.correctAnswer;
-                    const base = "w-full text-left px-4 py-2.5 rounded-md border transition-colors";
-                    let classes = "bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-750";
-                    if (isAnswer && isSelected) {
-                      classes = "bg-green-700 border-green-600 text-green-100";
-                    } else if (isAnswer) {
-                      classes = "bg-green-900 border-green-700 text-green-200";
-                    } else if (isSelected && !isAnswer) {
-                      classes = "bg-red-800 border-red-600 text-red-100";
-                    }
-                    return (
-                      <button key={i} className={`${base} ${classes}`} disabled>
-                        {opt}
-                      </button>
-                    );
-                  })}
-                </div>
+                {hasOptions ? (
+                  <div className="space-y-3">
+                    {result.options!.map((opt, i) => {
+                      const isSelected = opt === result.user_answer;
+                      const isAnswer = opt === result.correct_answer;
+                      const base = "w-full text-left px-4 py-3 rounded-lg transition-colors";
+                      let classes = "bg-gray-700 text-gray-300";
+                      if (isAnswer && isSelected) {
+                        classes = "bg-green-600 text-white";
+                      } else if (isAnswer) {
+                        classes = "bg-green-700 text-white";
+                      } else if (isSelected && !isAnswer) {
+                        classes = "bg-red-600 text-white";
+                      }
+                      return (
+                        <button key={i} className={`${base} ${classes}`} disabled>
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="space-y-2 text-sm">
+                    <div className={`p-3 rounded-lg ${result.is_correct ? 'bg-green-900/30 border border-green-700' : 'bg-red-900/30 border border-red-700'}`}>
+                      <p className="text-gray-400 mb-1">Your answer:</p>
+                      <p className="text-white">{result.user_answer || '(No answer)'}</p>
+                    </div>
+                    {!result.is_correct && (
+                      <div className="p-3 rounded-lg bg-green-900/30 border border-green-700">
+                        <p className="text-gray-400 mb-1">Correct answer:</p>
+                        <p className="text-white">{result.correct_answer}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
 
-        <div className="mt-8 flex gap-3">
-          <Link href="/history" className="px-4 py-2 rounded-lg bg-gray-700 text-white hover:bg-gray-600">
+        <div className="mt-8 flex gap-4">
+          <Link href="/history" className="px-6 py-3 rounded-lg bg-gray-700 text-white hover:bg-gray-600 font-medium transition-colors">
             Back to History
           </Link>
-          <Link href={`/quiz/${quiz.id}`} className="px-4 py-2 rounded-lg bg-[#625FFF] text-white hover:bg-[#544FFE]">
+          <Link href={`/quiz/${attemptData.quiz_id}`} className="px-6 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium transition-colors">
             Retake Quiz
           </Link>
         </div>
