@@ -45,6 +45,8 @@ export default function StartQuiz({ params }: { params: Promise<{ id: string }> 
         }
 
         const quizData = await getQuizForTaking(resolvedParams.id);
+        console.log('Loaded quiz data:', quizData);
+        console.log('Questions:', quizData.questions);
         setQuiz(quizData);
       } catch (error) {
         console.error('Failed to load quiz:', error);
@@ -171,6 +173,23 @@ export default function StartQuiz({ params }: { params: Promise<{ id: string }> 
   }
 
   if (showQuiz) {
+    // Safety check for questions
+    if (!quiz || !quiz.questions || quiz.questions.length === 0) {
+      return (
+        <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-xl font-bold text-white mb-4">No questions available</h2>
+            <Link 
+              href="/dashboard"
+              className="inline-block bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-lg transition-colors"
+            >
+              Back to Dashboard
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
     const currentQuestion = quiz.questions[currentQuestionIndex];
     const progress = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;
 

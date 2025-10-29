@@ -1,7 +1,8 @@
 # Environment variables
+be/.env
+fe/.env.local
 .env
-.env*.local
-*.env
+*.exe
 
 # Backend - Go
 be/*.exe

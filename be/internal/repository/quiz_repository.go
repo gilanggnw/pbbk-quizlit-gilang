@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"pbkk-quizlit-backend/internal/database"
 	"pbkk-quizlit-backend/internal/models"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -15,6 +18,47 @@ type QuizRepository struct{}
 
 func NewQuizRepository() *QuizRepository {
 	return &QuizRepository{}
+}
+
+// cleanQuestionText removes formatting artifacts and prefixes from question text
+func cleanQuestionText(text string) string {
+	// If text is empty, return as-is
+	if text == "" {
+		return text
+	}
+
+	// Remove bullet points and other special characters
+	text = strings.ReplaceAll(text, "•", "")
+	text = strings.ReplaceAll(text, "●", "")
+	text = strings.ReplaceAll(text, "○", "")
+	text = strings.ReplaceAll(text, "■", "")
+	text = strings.ReplaceAll(text, "□", "")
+
+	// Remove common question type prefixes followed by bullet/colon
+	patterns := []string{
+		`^Complete the sentence:\s*`,
+		`^True or False:\s*`,
+		`^Multiple Choice:\s*`,
+		`^Fill in the blank:\s*`,
+		`^Choose the correct answer:\s*`,
+	}
+
+	for _, pattern := range patterns {
+		re := regexp.MustCompile(pattern)
+		text = re.ReplaceAllString(text, "")
+	}
+
+	// Clean up extra whitespace
+	text = strings.TrimSpace(text)
+	re := regexp.MustCompile(`\s+`)
+	text = re.ReplaceAllString(text, " ")
+
+	// If cleaning resulted in empty string, return original
+	if text == "" {
+		return text
+	}
+
+	return text
 }
 
 // CreateQuiz creates a new quiz with questions in the database
@@ -50,6 +94,9 @@ func (r *QuizRepository) CreateQuiz(ctx context.Context, quiz *models.Quiz, user
 	for i := range quiz.Questions {
 		question := &quiz.Questions[i]
 
+		// Clean the question text
+		cleanedText := cleanQuestionText(question.Text)
+
 		// Marshal options to JSON
 		optionsJSON, err := json.Marshal(question.Options)
 		if err != nil {
@@ -65,9 +112,9 @@ func (r *QuizRepository) CreateQuiz(ctx context.Context, quiz *models.Quiz, user
 		var questionID int64
 		err = tx.QueryRow(ctx,
 			`INSERT INTO questions (quiz_id, question_text, options, correct_answer) 
-			 VALUES ($1, $2, $3, $4) 
+			 VALUES ($1, $2, $3::jsonb, $4) 
 			 RETURNING id`,
-			quizID, question.Text, optionsJSON, correctAnswer,
+			quizID, cleanedText, string(optionsJSON), correctAnswer,
 		).Scan(&questionID)
 		if err != nil {
 			return fmt.Errorf("failed to insert question: %w", err)
@@ -93,19 +140,21 @@ func (r *QuizRepository) GetQuiz(ctx context.Context, id string) (*models.Quiz, 
 
 	// Get quiz
 	var quiz models.Quiz
-	var title, description, pdfFilename string
+	var title, description, pdfFilename, userID string
 	var createdAt time.Time
 
 	err := db.QueryRow(ctx,
-		`SELECT id, title, description, pdf_filename, created_at FROM quizzes WHERE id = $1`,
+		`SELECT id, user_id, title, description, pdf_filename, created_at FROM quizzes WHERE id = $1`,
 		id,
-	).Scan(&quiz.ID, &title, &description, &pdfFilename, &createdAt)
+	).Scan(&quiz.ID, &userID, &title, &description, &pdfFilename, &createdAt)
 	if err == pgx.ErrNoRows {
 		return nil, fmt.Errorf("quiz not found")
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get quiz: %w", err)
 	}
+
+	quiz.UserID = userID
 
 	quiz.Title = title
 	quiz.Description = description
@@ -162,8 +211,8 @@ func (r *QuizRepository) GetQuiz(ctx context.Context, id string) (*models.Quiz, 
 	return &quiz, nil
 }
 
-// GetAllQuizzes retrieves all quizzes
-func (r *QuizRepository) GetAllQuizzes(ctx context.Context) ([]*models.Quiz, error) {
+// GetAllQuizzes retrieves all quizzes for a specific user
+func (r *QuizRepository) GetAllQuizzes(ctx context.Context, userID string) ([]*models.Quiz, error) {
 	db := database.GetDB()
 	if db == nil {
 		return nil, fmt.Errorf("database connection not initialized")
@@ -173,8 +222,10 @@ func (r *QuizRepository) GetAllQuizzes(ctx context.Context) ([]*models.Quiz, err
 		`SELECT q.id, q.title, q.description, q.pdf_filename, q.created_at, COUNT(qu.id) as question_count
 		 FROM quizzes q
 		 LEFT JOIN questions qu ON qu.quiz_id = q.id
+		 WHERE q.user_id = $1
 		 GROUP BY q.id, q.title, q.description, q.pdf_filename, q.created_at
 		 ORDER BY q.created_at DESC`,
+		userID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query quizzes: %w", err)
@@ -244,18 +295,30 @@ func (r *QuizRepository) DeleteQuiz(ctx context.Context, id string) error {
 }
 
 // SaveQuizAttempt saves a quiz attempt to the database
-func (r *QuizRepository) SaveQuizAttempt(ctx context.Context, quizID string, userID string, score int, totalQuestions int) (string, error) {
+func (r *QuizRepository) SaveQuizAttempt(ctx context.Context, quizID string, userID string, score int, totalQuestions int, answers map[string]string) (string, error) {
 	db := database.GetDB()
 	if db == nil {
 		return "", fmt.Errorf("database connection not initialized")
 	}
 
+	// Convert quizID string to int64
+	quizIDInt, err := strconv.ParseInt(quizID, 10, 64)
+	if err != nil {
+		return "", fmt.Errorf("invalid quiz ID format: %w", err)
+	}
+
+	// Marshal answers to JSON
+	answersJSON, err := json.Marshal(answers)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal answers: %w", err)
+	}
+
 	var attemptID int64
-	err := db.QueryRow(ctx,
-		`INSERT INTO quiz_attempts (quiz_id, user_id, score, total_questions, created_at) 
-		 VALUES ($1, $2, $3, $4, $5) 
+	err = db.QueryRow(ctx,
+		`INSERT INTO quiz_attempts (quiz_id, user_id, score, total_questions, user_answers, created_at) 
+		 VALUES ($1, $2, $3, $4, $5::jsonb, $6) 
 		 RETURNING id`,
-		quizID, userID, score, totalQuestions, time.Now(),
+		quizIDInt, userID, score, totalQuestions, string(answersJSON), time.Now(),
 	).Scan(&attemptID)
 	if err != nil {
 		return "", fmt.Errorf("failed to save quiz attempt: %w", err)
@@ -271,19 +334,26 @@ func (r *QuizRepository) GetQuizAttempt(ctx context.Context, attemptID string) (
 		return nil, fmt.Errorf("database connection not initialized")
 	}
 
-	// Get attempt details
+	// Convert attemptID string to int64
+	attemptIDInt, err := strconv.ParseInt(attemptID, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid attempt ID format: %w", err)
+	}
+
+	// Get attempt details including user_answers
 	var quizID int64
 	var userID string
 	var score int
 	var totalQuestions int
 	var createdAt time.Time
+	var userAnswersJSON []byte
 
-	err := db.QueryRow(ctx,
-		`SELECT quiz_id, user_id, score, total_questions, created_at 
+	err = db.QueryRow(ctx,
+		`SELECT quiz_id, user_id, score, total_questions, user_answers, created_at 
 		 FROM quiz_attempts 
 		 WHERE id = $1`,
-		attemptID,
-	).Scan(&quizID, &userID, &score, &totalQuestions, &createdAt)
+		attemptIDInt,
+	).Scan(&quizID, &userID, &score, &totalQuestions, &userAnswersJSON, &createdAt)
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -343,6 +413,16 @@ func (r *QuizRepository) GetQuizAttempt(ctx context.Context, attemptID string) (
 		})
 	}
 
+	// Parse user answers from JSON
+	var userAnswers map[string]string
+	if len(userAnswersJSON) > 0 {
+		if err := json.Unmarshal(userAnswersJSON, &userAnswers); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal user answers: %w", err)
+		}
+	} else {
+		userAnswers = make(map[string]string)
+	}
+
 	// Build the response
 	result := map[string]interface{}{
 		"attempt": map[string]interface{}{
@@ -351,6 +431,7 @@ func (r *QuizRepository) GetQuizAttempt(ctx context.Context, attemptID string) (
 			"user_id":         userID,
 			"score":           score,
 			"total_questions": totalQuestions,
+			"answers":         userAnswers,
 			"created_at":      createdAt.Format(time.RFC3339),
 		},
 		"quiz": map[string]interface{}{
@@ -364,4 +445,52 @@ func (r *QuizRepository) GetQuizAttempt(ctx context.Context, attemptID string) (
 	}
 
 	return result, nil
+}
+
+// ListUserAttempts retrieves all quiz attempts for a specific user
+func (r *QuizRepository) ListUserAttempts(ctx context.Context, userID string) ([]map[string]interface{}, error) {
+	db := database.GetDB()
+	if db == nil {
+		return nil, fmt.Errorf("database connection not initialized")
+	}
+
+	rows, err := db.Query(ctx,
+		`SELECT qa.id, qa.quiz_id, qa.score, qa.total_questions, qa.created_at, q.title, q.pdf_filename
+		 FROM quiz_attempts qa
+		 JOIN quizzes q ON qa.quiz_id = q.id
+		 WHERE qa.user_id = $1
+		 ORDER BY qa.created_at DESC`,
+		userID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query attempts: %w", err)
+	}
+	defer rows.Close()
+
+	attempts := []map[string]interface{}{}
+	for rows.Next() {
+		var attemptID int64
+		var quizID int64
+		var score, totalQuestions int
+		var createdAt time.Time
+		var title, pdfFilename string
+
+		if err := rows.Scan(&attemptID, &quizID, &score, &totalQuestions, &createdAt, &title, &pdfFilename); err != nil {
+			return nil, fmt.Errorf("failed to scan attempt: %w", err)
+		}
+
+		percentage := float64(score) / float64(totalQuestions) * 100
+
+		attempts = append(attempts, map[string]interface{}{
+			"id":              fmt.Sprintf("%d", attemptID),
+			"quiz_id":         fmt.Sprintf("%d", quizID),
+			"quiz_title":      title,
+			"score":           score,
+			"total_questions": totalQuestions,
+			"percentage":      percentage,
+			"created_at":      createdAt.Format(time.RFC3339),
+		})
+	}
+
+	return attempts, nil
 }

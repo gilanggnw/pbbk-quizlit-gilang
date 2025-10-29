@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"pbkk-quizlit-backend/internal/middleware"
 	"pbkk-quizlit-backend/internal/models"
@@ -8,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // GetQuizForTaking returns a quiz without correct answers for taking
@@ -99,13 +99,17 @@ func (h *QuizHandler) SubmitQuizAttempt(c *gin.Context) {
 	// Get user ID from context
 	userID := middleware.GetUserID(c)
 
-	// Save attempt to database
+	// Save attempt to database with answers
 	repo := repository.NewQuizRepository()
 	ctx := c.Request.Context()
-	attemptID, err := repo.SaveQuizAttempt(ctx, submission.QuizID, userID, correctCount, totalQuestions)
+	attemptID, err := repo.SaveQuizAttempt(ctx, submission.QuizID, userID, correctCount, totalQuestions, submission.Answers)
 	if err != nil {
 		h.logger.Errorf("Failed to save quiz attempt: %v", err)
-		attemptID = uuid.New().String() // Use UUID as fallback
+		c.JSON(http.StatusInternalServerError, models.APIResponse{
+			Success: false,
+			Message: fmt.Sprintf("Failed to save quiz attempt: %v", err),
+		})
+		return
 	}
 
 	// Create attempt result
@@ -150,10 +154,22 @@ func (h *QuizHandler) GetQuizAttempt(c *gin.Context) {
 
 // ListUserAttempts lists all attempts for the current user
 func (h *QuizHandler) ListUserAttempts(c *gin.Context) {
-	// For now, return empty list
-	// In a real implementation, you'd fetch user's attempts from database
+	// Get user ID from auth middleware
+	userID := middleware.GetUserID(c)
+
+	// Get attempts from database
+	attempts, err := h.quizService.ListUserAttempts(userID)
+	if err != nil {
+		h.logger.Errorf("Failed to list user attempts: %v", err)
+		c.JSON(http.StatusInternalServerError, models.APIResponse{
+			Success: false,
+			Message: "Failed to retrieve attempts",
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, map[string]interface{}{
-		"attempts": []map[string]interface{}{},
-		"total":    0,
+		"attempts": attempts,
+		"total":    len(attempts),
 	})
 }

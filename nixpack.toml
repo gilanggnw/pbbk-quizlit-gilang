@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["go_1_21"]
+
+[phases.build]
+cmds = ["cd be && go mod download && go build -o app"]
+
+[start]
+cmd = "cd be && ./app"
