@@ -1,10 +1,9 @@
 // API configuration
 import { getAccessToken } from './auth';
 
-// Use environment variable for API URL, fallback to localhost for development
 const API_BASE_URL = typeof window !== 'undefined' 
-  ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1')
-  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1');
+  ? 'http://localhost:8080/api/v1' 
+  : 'http://localhost:8080/api/v1';
 
 // API endpoints
 export const API_ENDPOINTS = {

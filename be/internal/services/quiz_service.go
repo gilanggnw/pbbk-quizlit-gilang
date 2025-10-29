@@ -48,9 +48,9 @@ func (qs *QuizService) GetQuiz(id string) (*models.Quiz, error) {
 	return quiz, nil
 }
 
-func (qs *QuizService) GetAllQuizzes() ([]*models.Quiz, error) {
+func (qs *QuizService) GetAllQuizzes(userID string) ([]*models.Quiz, error) {
 	ctx := context.Background()
-	quizzes, err := qs.repo.GetAllQuizzes(ctx)
+	quizzes, err := qs.repo.GetAllQuizzes(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -79,4 +79,13 @@ func (qs *QuizService) GetQuizAttempt(attemptID string) (map[string]interface{},
 		return nil, err
 	}
 	return attempt, nil
+}
+
+func (qs *QuizService) ListUserAttempts(userID string) ([]map[string]interface{}, error) {
+	ctx := context.Background()
+	attempts, err := qs.repo.ListUserAttempts(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return attempts, nil
 }

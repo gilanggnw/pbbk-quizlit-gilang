@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Header from "../../components/Header";
 import { useRouter } from "next/navigation";
-import { listQuizzes } from "@/app/lib/quizApi";
+import { listQuizzes, deleteQuiz } from "@/app/lib/quizApi";
 import { getCurrentUser, signOut } from "@/app/lib/auth";
 
 interface Quiz {
@@ -100,12 +100,19 @@ export default function Dashboard() {
     }
   };
 
-  const handleDeleteQuiz = (id: string) => {
-    if (confirm('Are you sure you want to delete this quiz?')) {
+  const handleDeleteQuiz = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this quiz? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await deleteQuiz(id);
+      // Update local state after successful deletion
       const updatedQuizzes = quizzes.filter(q => q.id !== id);
       setQuizzes(updatedQuizzes);
-      // Note: Backend delete would go here
-      // For now just update local state
+    } catch (error) {
+      console.error('Failed to delete quiz:', error);
+      alert('Failed to delete quiz. Please try again.');
     }
   };
 

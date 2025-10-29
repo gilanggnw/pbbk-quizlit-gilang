@@ -200,3 +200,17 @@ export async function listUserAttempts(): Promise<{ attempts: AttemptListItem[] 
 
   return response.json();
 }
+
+// Delete a quiz (requires auth)
+export async function deleteQuiz(quizId: string): Promise<void> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_BASE_URL}/api/v1/quizzes/${quizId}`, {
+    method: 'DELETE',
+    headers,
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(error || 'Failed to delete quiz');
+  }
+}

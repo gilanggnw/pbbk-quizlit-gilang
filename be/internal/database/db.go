@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -23,6 +24,9 @@ func Connect(databaseURL string) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse database URL: %w", err)
 	}
+
+	// Disable automatic prepared statement caching to avoid conflicts
+	config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 
 	// Create connection pool
 	DB, err = pgxpool.NewWithConfig(context.Background(), config)

@@ -95,6 +95,13 @@ func CreateQuiz(w http.ResponseWriter, r *http.Request) {
 
 // ListQuizzes lists all available quizzes
 func ListQuizzes(w http.ResponseWriter, r *http.Request) {
+	// Get user from context (added by auth middleware)
+	userID, ok := r.Context().Value("userID").(string)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	// Get query parameters
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
@@ -119,10 +126,11 @@ func ListQuizzes(w http.ResponseWriter, r *http.Request) {
 		       COUNT(qs.id) as question_count
 		FROM quizzes q
 		LEFT JOIN questions qs ON q.id = qs.quiz_id
+		WHERE q.user_id = $1
 		GROUP BY q.id, q.created_at, q.pdf_filename, q.user_id, q.title
 		ORDER BY q.created_at DESC
-		LIMIT $1 OFFSET $2
-	`, limit, offset)
+		LIMIT $2 OFFSET $3
+	`, userID, limit, offset) // Add userID as first parameter
 	if err != nil {
 		log.Printf("Failed to query quizzes: %v", err)
 		http.Error(w, "Failed to fetch quizzes", http.StatusInternalServerError)
@@ -294,10 +302,10 @@ func SubmitQuizAttempt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Insert quiz attempt
+	// Insert quiz attempt WITH user_answers
 	var attemptID string
 	err = DB.QueryRow(ctx,
-		"INSERT INTO quiz_attempts (quiz_id, user_id, score, total_questions, answers) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+		"INSERT INTO quiz_attempts (quiz_id, user_id, score, total_questions, user_answers, created_at) VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING id",
 		req.QuizID, userID, score, totalQuestions, answersJSON,
 	).Scan(&attemptID)
 	if err != nil {
@@ -340,7 +348,7 @@ func GetQuizAttempt(w http.ResponseWriter, r *http.Request) {
 	var attempt QuizAttempt
 	var answersJSON []byte
 	err := DB.QueryRow(ctx, `
-		SELECT qa.id, qa.created_at, qa.quiz_id, qa.user_id, qa.score, qa.total_questions, qa.answers,
+		SELECT qa.id, qa.created_at, qa.quiz_id, qa.user_id, qa.score, qa.total_questions, qa.user_answers,
 		       q.title, q.pdf_filename
 		FROM quiz_attempts qa
 		JOIN quizzes q ON qa.quiz_id = q.id
@@ -356,15 +364,6 @@ func GetQuizAttempt(w http.ResponseWriter, r *http.Request) {
 		&attempt.QuizTitle,
 		&attempt.PDFFilename,
 	)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			http.Error(w, "Attempt not found", http.StatusNotFound)
-			return
-		}
-		log.Printf("Failed to query attempt: %v", err)
-		http.Error(w, "Failed to fetch attempt", http.StatusInternalServerError)
-		return
-	}
 
 	// Parse answers JSON
 	if err := json.Unmarshal(answersJSON, &attempt.Answers); err != nil {
