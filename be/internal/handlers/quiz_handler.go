@@ -199,9 +199,10 @@ func (h *QuizHandler) GetAllQuizzes(c *gin.Context) {
 
 	quizzes, err := h.quizService.GetAllQuizzes(userID)
 	if err != nil {
+		h.logger.Errorf("Failed to get all quizzes for user %s: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, models.APIResponse{
 			Success: false,
-			Message: "Failed to retrieve quizzes",
+			Message: fmt.Sprintf("Failed to retrieve quizzes: %v", err),
 		})
 		return
 	}

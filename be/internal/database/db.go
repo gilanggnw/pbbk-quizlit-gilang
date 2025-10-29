@@ -17,6 +17,12 @@ func Connect(databaseURL string) error {
 		return fmt.Errorf("database URL is empty")
 	}
 
+	// Close existing connection if any
+	if DB != nil {
+		DB.Close()
+		log.Println("Closed existing database connection")
+	}
+
 	var err error
 
 	// Create connection pool config
@@ -28,6 +34,10 @@ func Connect(databaseURL string) error {
 	// Disable automatic prepared statement caching to avoid conflicts
 	config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 
+	// Set connection pool settings
+	config.MaxConns = 10
+	config.MinConns = 2
+
 	// Create connection pool
 	DB, err = pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
@@ -36,6 +46,7 @@ func Connect(databaseURL string) error {
 
 	// Test connection
 	if err := DB.Ping(context.Background()); err != nil {
+		DB.Close()
 		return fmt.Errorf("failed to ping database: %w", err)
 	}
 
