@@ -75,13 +75,13 @@ func (r *QuizRepository) CreateQuiz(ctx context.Context, quiz *models.Quiz, user
 	}
 	defer tx.Rollback(ctx)
 
-	// Insert quiz
+	// Insert quiz with difficulty
 	var quizID int64
 	err = tx.QueryRow(ctx,
-		`INSERT INTO quizzes (user_id, title, description, pdf_filename, created_at) 
-		 VALUES ($1, $2, $3, $4, $5) 
+		`INSERT INTO quizzes (user_id, title, description, pdf_filename, difficulty, created_at) 
+		 VALUES ($1, $2, $3, $4, $5, $6) 
 		 RETURNING id`,
-		userID, quiz.Title, quiz.Description, quiz.Title, time.Now(),
+		userID, quiz.Title, quiz.Description, quiz.Title, quiz.Difficulty, time.Now(),
 	).Scan(&quizID)
 	if err != nil {
 		return fmt.Errorf("failed to insert quiz: %w", err)
@@ -219,12 +219,12 @@ func (r *QuizRepository) GetAllQuizzes(ctx context.Context, userID string) ([]*m
 	}
 
 	rows, err := db.Query(ctx,
-		`SELECT q.id, q.title, q.description, q.pdf_filename, q.created_at, COUNT(qu.id) as question_count
-		 FROM quizzes q
-		 LEFT JOIN questions qu ON qu.quiz_id = q.id
-		 WHERE q.user_id = $1
-		 GROUP BY q.id, q.title, q.description, q.pdf_filename, q.created_at
-		 ORDER BY q.created_at DESC`,
+		`SELECT q.id, q.title, q.description, q.pdf_filename, q.difficulty, q.created_at, COUNT(qu.id) as question_count
+         FROM quizzes q
+         LEFT JOIN questions qu ON qu.quiz_id = q.id
+         WHERE q.user_id = $1
+         GROUP BY q.id, q.title, q.description, q.pdf_filename, q.difficulty, q.created_at
+         ORDER BY q.created_at DESC`,
 		userID,
 	)
 	if err != nil {
@@ -235,20 +235,20 @@ func (r *QuizRepository) GetAllQuizzes(ctx context.Context, userID string) ([]*m
 	var quizzes []*models.Quiz
 	for rows.Next() {
 		quiz := &models.Quiz{}
-		var title, description, pdfFilename string
+		var title, description, pdfFilename, difficulty string
 		var createdAt time.Time
 		var questionCount int
 
-		if err := rows.Scan(&quiz.ID, &title, &description, &pdfFilename, &createdAt, &questionCount); err != nil {
+		if err := rows.Scan(&quiz.ID, &title, &description, &pdfFilename, &difficulty, &createdAt, &questionCount); err != nil {
 			return nil, fmt.Errorf("failed to scan quiz: %w", err)
 		}
 
 		quiz.Title = title
 		quiz.Description = description
+		quiz.Difficulty = difficulty
 		quiz.CreatedAt = createdAt
 		quiz.UpdatedAt = createdAt
 		quiz.TotalQuestions = questionCount
-		quiz.Difficulty = "medium" // Default
 
 		quizzes = append(quizzes, quiz)
 	}
